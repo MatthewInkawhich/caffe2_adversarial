@@ -1,1 +1,1 @@
-# caffe2_adversarial
+This repo serves as a code sharing mechanism for research.
