@@ -1,3 +1,10 @@
+# Use this script to train a simple MNIST net on the lmdbs of your choice
+# LINES TO MODIFY:
+#   - Must manually set Configs
+#   - Modify AddLeNetModel function if your images are:
+#       (a) not 1 color channel
+#       (b) not 28x28
+
 from __future__ import print_function
 from matplotlib import pyplot
 import numpy as np
@@ -6,29 +13,32 @@ import shutil
 import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core, model_helper, net_drawer, workspace, visualize, brew, optimizer
 
-# data and root paths
-### CHANGE THESE
-current_folder = os.path.join(os.path.expanduser('~'), 'caffe2_examples')
-data_folder = os.path.join(os.path.expanduser('~'), 'MSTAR_images')
-root_folder = os.path.join(current_folder, 'mstar')
+########################################################################
+# Configs
+########################################################################
+# root_folder is where the bookkeeping files are output to
+root_folder = os.path.join(os.path.expanduser('~'), 'caffe2_examples', 'train_output')
+# data_folder is the folder that contains the lmdbs
+data_folder = os.path.join(os.path.expanduser('~'), 'mnistasjpg')
+training_lmdb = os.path.join(data_folder, 'shuffled_train_lmdb')
+validation_lmdb = os.path.join(data_folder, 'shuffled_validate_lmdb')
+testing_lmdb = os.path.join(data_folder, 'shuffled_test_lmdb')
+num_classes = 10                    #number of image classes
+training_net_batch_size = 50        #batch size for training
+validation_images = 2000            #total number of validation images
+testing_images = 2000               #total number of testing images
+training_iters = 1000               #training iterations
+validation_interval = 50            #validate every ... training iterations
+
+########################################################################
+# create root_folder if not already there
 if not os.path.isdir(root_folder):
     os.makedirs(root_folder)
 
 # resetting workspace sets root_folder as "root" dir (bookkeeping files go here)
 workspace.ResetWorkspace(root_folder)
 print("training data folder:" + data_folder)
-print("workspace root folder:" + root_folder)
-
-num_classes = 8
-training_lmdb = os.path.join(data_folder, 'shuffled_train_lmdb')
-validation_lmdb = os.path.join(data_folder, 'shuffled_validate_lmdb')
-testing_lmdb = os.path.join(data_folder, 'shuffled_test_lmdb')
-training_net_batch_size = 32
-validation_net_batch_size = 452
-testing_net_batch_size = 442
-training_iters = 300
-validation_interval = 20
-
+print("workspace output folder:" + root_folder)
 
 
 ########################################################################
@@ -63,6 +73,7 @@ def AddLeNetModel(model, data):
     '''
 
     # Image size: 28 x 28 -> 24 x 24
+    ############# Change dim_in value if images are more than 1 color channel
     conv1 = brew.conv(model, data, 'conv1', dim_in=1, dim_out=20, kernel=5)
     # Image size: 24 x 24 -> 12 x 12
     pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
@@ -71,8 +82,8 @@ def AddLeNetModel(model, data):
     # Image size: 8 x 8 -> 4 x 4
     pool2 = brew.max_pool(model, conv2, 'pool2', kernel=2, stride=2)
     # 50 * 4 * 4 stands for dim_out from previous layer multiplied by the image size
-    fc3 = brew.fc(model, pool2, 'fc3', dim_in=50 * 29 * 29, dim_out=500)
-    #fc3 = brew.fc(model, pool2, 'fc3', dim_in=50 * 4 * 4, dim_out=500)
+    ############# Change dim_in value if images are not 28x28
+    fc3 = brew.fc(model, pool2, 'fc3', dim_in=50 * 4 * 4, dim_out=500)
     fc3 = brew.relu(model, fc3, fc3)
     pred = brew.fc(model, fc3, 'pred', 500, num_classes)
     softmax = brew.softmax(model, pred, 'softmax')
@@ -133,7 +144,7 @@ def AddBookkeepingOperators(model):
 arg_scope = {"order": "NCHW"}
 # Training model
 train_model = model_helper.ModelHelper(
-    name="mstar_train", arg_scope=arg_scope)
+    name="train_net", arg_scope=arg_scope)
 data, label = AddInput(
     train_model, batch_size=training_net_batch_size,
     db=training_lmdb,
@@ -144,29 +155,25 @@ AddBookkeepingOperators(train_model)
 
 # Validation model
 val_model = model_helper.ModelHelper(
-    name="mstar_val", arg_scope=arg_scope, init_params=False)
+    name="val_net", arg_scope=arg_scope, init_params=False)
 data, label = AddInput(
-    val_model, batch_size=validation_net_batch_size,
+    val_model, batch_size=validation_images,
     db=validation_lmdb,
     db_type='lmdb')
 softmax = AddLeNetModel(val_model, data)
 AddAccuracy(val_model, softmax, label)
 
-# Testing model. We will set the batch size to 100, so that the testing
-# pass is 100 iterations (10,000 images in total).
-# For the testing model, we need the data input part, the main LeNetModel
-# part, and an accuracy part. Note that init_params is set False because
-# we will be using the parameters obtained from the train model.
+# Testing model
 test_model = model_helper.ModelHelper(
-    name="mstar_test", arg_scope=arg_scope, init_params=False)
+    name="test_net", arg_scope=arg_scope, init_params=False)
 data, label = AddInput(
-    test_model, batch_size=testing_net_batch_size,
+    test_model, batch_size=testing_images,
     db=testing_lmdb,
     db_type='lmdb')
 softmax = AddLeNetModel(test_model, data)
 AddAccuracy(test_model, softmax, label)
 
-# Deployment model. We simply need the main LeNetModel part.
+# Deployment model
 deploy_model = model_helper.ModelHelper(
     name="mstar_deploy", arg_scope=arg_scope, init_params=False)
 AddLeNetModel(deploy_model, "data")
@@ -247,3 +254,10 @@ workspace.RunNet(test_model.net.Proto().name)
 test_accuracy = workspace.FetchBlob('accuracy')
 # After the execution is done, let's print the mean accuracy value.
 print('\ntest_accuracy: %f' % test_accuracy)
+
+
+
+########################################################################
+# Save deploy model with trained weights and biases
+########################################################################
+# ... TO DO NATE ...
