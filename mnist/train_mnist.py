@@ -17,9 +17,9 @@ from caffe2.python import core, model_helper, net_drawer, workspace, visualize, 
 # Configs
 ########################################################################
 root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_output') #where bookkeeping files are outputted
-training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mnist', 'training_lmdb')
-validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mnist', 'validation_lmdb')
-testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mnist', 'testing_lmdb')
+training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'training_lmdb')
+validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'validation_lmdb')
+testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'testing_lmdb')
 num_classes = 10                    #number of image classes
 training_net_batch_size = 50        #batch size for training
 validation_images = 2000            #total number of validation images
