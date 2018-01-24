@@ -32,19 +32,18 @@ from caffe2.python import workspace, model_helper
 
 # handle command line arguments
 parser = argparse.ArgumentParser(description='Converts a directory of images to an LMDB using a label file')
-parser.add_argument('-l', '--labels', help='path to labels file', required=True)
+parser.add_argument('-l', '--label_file', help='path to labels file', required=True)
 parser.add_argument('-o', '--output', help='name of output lmdb', required=True)
 parser.add_argument('-s', '--shuffle', action='store_true', help='if set, data is shuffled before going conversion', required=False)
 args = vars(parser.parse_args())
 
 
 # Read labels file into list (for shuffling purposes)
-with open(args['labels']) as f:
+with open(args['label_file']) as f:
     content = f.readlines()
 content = [x.rstrip() for x in content]
 if (args['shuffle']):
     random.shuffle(content)
-print(content)
 
 
 print(">>> Write database...")
@@ -58,7 +57,6 @@ with env.begin(write=True) as txn:
     for line in content:
         img_file = line.split()[0]
         label = int(line.split()[1])
-        print(img_file, label)
         img_data = imread(img_file)
 
         # ensure that 1 channel images get channel dimension (1)
@@ -87,3 +85,4 @@ with env.begin(write=True) as txn:
         count = count + 1
 
 print("Inserted {} rows".format(count))
+print("\nLMDB saved at " + args['output'])

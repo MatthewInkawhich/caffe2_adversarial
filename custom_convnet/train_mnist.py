@@ -1,4 +1,4 @@
-# Use this script to train a simple MNIST net on the lmdbs of your choice
+# Use this script to train a simple MNIST net on the lmdbs of your choice and save the trained model
 # LINES TO MODIFY:
 #   - Must manually set Configs
 #   - Modify AddLeNetModel function if your images are:
@@ -16,13 +16,10 @@ from caffe2.python import core, model_helper, net_drawer, workspace, visualize, 
 ########################################################################
 # Configs
 ########################################################################
-# root_folder is where the bookkeeping files are output to
-root_folder = os.path.join(os.path.expanduser('~'), 'caffe2_examples', 'train_output')
-# data_folder is the folder that contains the lmdbs
-data_folder = os.path.join(os.path.expanduser('~'), 'mnistasjpg')
-training_lmdb = os.path.join(data_folder, 'shuffled_train_lmdb')
-validation_lmdb = os.path.join(data_folder, 'shuffled_validate_lmdb')
-testing_lmdb = os.path.join(data_folder, 'shuffled_test_lmdb')
+root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_output') #where bookkeeping files are outputted
+training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mnist', 'training_lmdb')
+validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mnist', 'validation_lmdb')
+testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mnist', 'testing_lmdb')
 num_classes = 10                    #number of image classes
 training_net_batch_size = 50        #batch size for training
 validation_images = 2000            #total number of validation images
@@ -37,7 +34,6 @@ if not os.path.isdir(root_folder):
 
 # resetting workspace sets root_folder as "root" dir (bookkeeping files go here)
 workspace.ResetWorkspace(root_folder)
-print("training data folder:" + data_folder)
 print("workspace output folder:" + root_folder)
 
 
