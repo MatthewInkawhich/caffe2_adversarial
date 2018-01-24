@@ -7,6 +7,7 @@ import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core, model_helper, net_drawer, workspace, visualize, brew, optimizer
 
 # data and root paths
+### CHANGE THESE
 current_folder = os.path.join(os.path.expanduser('~'), 'caffe2_examples')
 data_folder = os.path.join(os.path.expanduser('~'), 'MSTAR_images')
 root_folder = os.path.join(current_folder, 'mstar')
@@ -246,21 +247,3 @@ workspace.RunNet(test_model.net.Proto().name)
 test_accuracy = workspace.FetchBlob('accuracy')
 # After the execution is done, let's print the mean accuracy value.
 print('\ntest_accuracy: %f' % test_accuracy)
-
-
-
-########################################################################
-# Save deploy model with trained weights and biases
-########################################################################
-# construct the model to be exported
-# the inputs/outputs of the model are manually specified.
-pe_meta = pe.PredictorExportMeta(
-    predict_net=deploy_model.net.Proto(),
-    parameters=[str(b) for b in deploy_model.params],
-    inputs=["data"],
-    outputs=["softmax"],
-)
-
-# save the model to a file. Use minidb as the file format
-pe.save_to_db("minidb", os.path.join(root_folder, "mnist_model.minidb"), pe_meta)
-print("The deploy model is saved to: " + root_folder + "/mnist_model.minidb")
