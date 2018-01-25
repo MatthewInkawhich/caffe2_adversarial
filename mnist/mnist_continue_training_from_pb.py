@@ -1,85 +1,79 @@
 # NAI
-# This is the basic MNIST tutorial from the caffe2 documentation
-# 	trimmed down to only what is needed for training and saving the pb file.
-#   The original tutorial has been decomposed into a single sequential program
-#   for better understanding.
+# This script gives an example of how to continue training from a
+#	saved pb file. The inputs to this script are the train lmdb,
+#	the predict net pb file, and the init net pb file. The output is
+#	a new set of predict/init net pb files.
 
-# import dependencies
-print "Import Dependencies..."
-from matplotlib import pyplot
-import numpy as np 
+# Methodology:
+#	- create new model helper
+#	- add data layer with train lmdb
+#	- add predict net from input predict_net.pb
+#	- add init net from input init_net.pb
+#	- add the training operators
+# 	- run the training
+#	- save the new model
+
+# Problem - cant get it to improve the accuracy !!!
+# It doesnt seem like it is learning anything anymore
+
+import numpy as np
+import matplotlib.pyplot as plt
 import os
-import shutil
-import caffe2.python.predictor.predictor_exporter as pe 
-from caffe2.python import core,model_helper,net_drawer,workspace,visualize,brew,utils
+from caffe2.python import core,model_helper,net_drawer,optimizer,workspace,visualize,brew,utils
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
 
 ##################################################################################
-# MAIN
+# Get inputs
 
-print "Entering Main..."
+TRAIN_LMDB = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnist-lmdb/mnist-train-nchw-lmdb")
+INIT_NET = "mnist_init_net.pb"
+PREDICT_NET = "mnist_predict_net.pb"
+predict_net_out = "UPDATED_mnist_predict_net.pb" # Note: these are in PWD
+init_net_out = "UPDATED_mnist_init_net.pb"
+train_iters = 50
 
-##################################################################################
-# Gather Inputs
-train_lmdb = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnist-lmdb/mnist-train-nchw-lmdb")
-predict_net_out = "mnist_predict_net.pb" # Note: these are in PWD
-init_net_out = "mnist_init_net.pb"
-training_iters = 10
-
-# Make sure the training lmdb exists
-if not os.path.exists(train_lmdb):
-	print "ERROR: train lmdb NOT found"
+# Make sure the specified inputs exist
+if ((not os.path.exists(TRAIN_LMDB)) or (not os.path.exists(INIT_NET)) or (not os.path.exists(PREDICT_NET))):
+	print "ERROR: An input was not found"
 	exit()
 
 ##################################################################################
-# Create model helper for use in this script
+# Create a model object (using model helper)
 
-# specify that input data is stored in NCHW storage order
-arg_scope = {"order":"NCHW"}
+arg_scope = {"order": "NCHW"}
+train_model = model_helper.ModelHelper(name="train_model", arg_scope=arg_scope, init_params=False)
 
-# create the model object that will be used for the train net
-# This model object contains the network definition and the parameter storage
-train_model = model_helper.ModelHelper(name="mnist_train", arg_scope=arg_scope)
 
 ##################################################################################
-#### Step 1: Add Input Data
+# Add the input ('data') stuff to the model
 
-# Go read the data from the lmdb and format it properly
-# Since the images are stored as 8-bit ints, we will read them as such
-# We are using the TensorProtosDBInput because the lmdbs were created with a TensorProtos object
-data_uint8, label = train_model.TensorProtosDBInput([], ["data_uint8", "label"], batch_size=64, db=train_lmdb, db_type='lmdb')
-# cast the 8-bit data to floats
+data_uint8, label = train_model.TensorProtosDBInput([], ["data_uint8", "label"], batch_size=100, db=TRAIN_LMDB, db_type='lmdb')
 data = train_model.Cast(data_uint8, "data", to=core.DataType.FLOAT)
-# scale data from [0,255] -> [0,1]
 data = train_model.Scale(data,data,scale=float(1./256))
-# enforce a stopgradient because we do not need the gradient of the data for the backward pass
 data = train_model.StopGradient(data,data)
-# Here, we have access to the data and the labels
-# the data is of shape [batch_size,num_channels,width,height]
-# for mnist the shape is [bsize, 1, 28, 28]
 
 ##################################################################################
-#### Step 2: Add the model definition the the model object
-# This is where we specify the network architecture from 'conv1' -> 'softmax'
-# [Arch: data->conv->pool->...->fc->relu->softmax]
+# Add the pretrained model stuff (info from the pbs) to the model helper object
 
-def AddLeNetModel(model, data):
-	conv1 = brew.conv(model, data, 'conv1', dim_in=1, dim_out=20, kernel=5)
-	pool1 = brew.max_pool(model, conv1, 'pool1',kernel=2,stride=2)
-	conv2 = brew.conv(model, pool1, 'conv2', dim_in=20, dim_out=50, kernel=5)
-	pool2 = brew.max_pool(model, conv2, 'pool2',kernel=2, stride=2)
-	fc3 = brew.fc(model, pool2, 'fc3', dim_in=50*4*4, dim_out=500)
-	fc3 = brew.relu(model, fc3, fc3)
-	pred = brew.fc(model,fc3,'pred',500,10)
-	softmax = brew.softmax(model,pred, 'softmax')
+# Populate the model obj with the init net stuff, which provides the parameters for the model
+init_net_proto = caffe2_pb2.NetDef()
+with open(INIT_NET, "rb") as f:
+    init_net_proto.ParseFromString(f.read())
+tmp_param_net = core.Net(init_net_proto)
+train_model.param_init_net = train_model.param_init_net.AppendNet(tmp_param_net)
 
-softmax=AddLeNetModel(train_model, data)
+# Populate the model obj with the predict net stuff, which defines the structure of the model
+predict_net_proto = caffe2_pb2.NetDef()
+with open(PREDICT_NET, "rb") as f:
+    predict_net_proto.ParseFromString(f.read())
+tmp_predict_net = core.Net(predict_net_proto)
+train_model.net = train_model.net.AppendNet(tmp_predict_net)
 
 ##################################################################################
-#### Step 3: Add training operators to the model
-# TODO: use the optimizer class here instead of doing sgd by hand
+# Add the training operators to the model
 
+#print "GOA: ",train_model.gradient_ops_added
 xent = train_model.LabelCrossEntropy(['softmax', 'label'], 'xent')
 loss = train_model.AveragedLoss(xent, 'loss')
 brew.accuracy(train_model, ['softmax', 'label'], 'accuracy')
@@ -88,10 +82,10 @@ opt = optimizer.build_sgd(train_model, base_learning_rate=0.1)
 for param in train_model.GetOptimizationParamInfo():
     opt(train_model.net, train_model.param_init_net, param)
 
+#print "GOA: ",train_model.gradient_ops_added
+#exit()
 
 '''
-# At this point, the basic architecture of the model exists but none of required operators for training exist.
-# Calculate the cross entropy of the label array with the softmax array
 xent = train_model.LabelCrossEntropy(['softmax','label'], 'xent')
 # compute the expected loss
 loss = train_model.AveragedLoss(xent,"loss")
@@ -125,17 +119,15 @@ for param in train_model.params:
 '''
 
 ##################################################################################
-#### Run the training procedure
+# Run the training
 
-# run the param init network once
 workspace.RunNetOnce(train_model.param_init_net)
-# create the network
 workspace.CreateNet(train_model.net, overwrite=True)
-# Set the total number of iterations and track the accuracy and loss
-total_iters = training_iters
+
+total_iters = train_iters
 accuracy = np.zeros(total_iters)
 loss = np.zeros(total_iters)
-# Manually run the network for the specified amount of iterations
+
 for i in range(total_iters):
 	workspace.RunNet(train_model.net)
 	accuracy[i] = workspace.FetchBlob('accuracy')
@@ -143,21 +135,17 @@ for i in range(total_iters):
 	print "accuracy: ", accuracy[i]
 	print "loss: ", loss[i]
 
-# After execution is done lets plot the values
-pyplot.plot(loss,'b', label='loss')
-pyplot.plot(accuracy,'r', label='accuracy')
-pyplot.legend(loc='upper right')
-pyplot.show()
+plt.plot(loss, 'b', label="loss")
+plt.plot(accuracy, 'r', label="accuracy")
+plt.legend(loc="upper right")
+plt.show()
 
 ##################################################################################
-#### Save the trained model for testing later
+# Save the retrained model with new pb files
 
-# save as two protobuf files (predict_net.pb and init_net.pb)
-# predict_net.pb defines the architecture of the network
-# init_net.pb defines the network params/weights
-print "Saving the trained model to predict/init.pb files"
-deploy_model = model_helper.ModelHelper(name="mnist_deploy", arg_scope=arg_scope, init_params=False)
-AddLeNetModel(deploy_model, "data")
+print "Saving the new model to predict/init.pb files"
+deploy_model = model_helper.ModelHelper(name="UPDATED_mnist_deploy", arg_scope=arg_scope, init_params=False)
+deploy_model.net = core.Net(predict_net_proto)
 
 # Use the MOBILE EXPORTER to save the deploy model as pbs
 # https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
@@ -170,6 +158,10 @@ with open(predict_net_out, 'wb') as f:
     f.write(predict_net.SerializeToString())
 
 print "Done, exiting..."
+
+
+
+
 
 
 
