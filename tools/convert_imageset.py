@@ -25,7 +25,7 @@ import os
 import random
 import numpy as np
 import lmdb
-from scipy.misc import imresize
+from scipy.misc import imresize, imsave
 import cv2
 from caffe2.proto import caffe2_pb2
 from caffe2.python import workspace, model_helper
@@ -77,7 +77,7 @@ env = lmdb.open(output, map_size=LMDB_MAP_SIZE)
 
 with env.begin(write=True) as txn:
 
-    def create_tensorprotos(img_data, label, index):
+    def insert_image_to_lmdb(img_data, label, index):
         # Create TensorProtos
         tensor_protos = caffe2_pb2.TensorProtos()
         img_tensor = tensor_protos.protos.add()
@@ -104,10 +104,6 @@ with env.begin(write=True) as txn:
         label = int(line.split()[1])
         img_data = cv2.imread(img_file)
 
-        # ensure that grayscale images get 3 dimensions
-        # if (img_data.ndim < 3):
-        #    img_data = np.expand_dims(img_data, axis=0)
-
         # resize image as desired
         h, w, _ = img_data.shape
 
@@ -116,6 +112,7 @@ with env.begin(write=True) as txn:
         else:
             img_data = crop_center(img_data, int(desired_h), int(desired_w))
 
+
         if ((img_data[:,:,0] == img_data[:,:,1]).all() and (img_data[:,:,0] == img_data[:,:,2]).all()):
             img_data = img_data[:,:,0]
             img_data = np.expand_dims(img_data, axis=2)
@@ -123,11 +120,11 @@ with env.begin(write=True) as txn:
         img_for_lmdb = np.transpose(img_data, (2,0,1))
 
         # insert correctly sized image
-        count = create_tensorprotos(img_data,label,count)
+        count = insert_image_to_lmdb(img_for_lmdb,label,count)
 
         # insert horizontally flipped version if flag was set
         if (horizontal_flip):
-            count = create_tensorprotos(np.fliplr(img_data), label, count)
+            count = insert_image_to_lmdb(np.fliplr(img_for_lmdb), label, count)
 
         #if (permutations):
 
