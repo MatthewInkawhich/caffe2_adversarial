@@ -102,11 +102,13 @@ with env.begin(write=True) as txn:
     for line in content:
         img_file = line.split()[0]
         label = int(line.split()[1])
-        img_data = cv2.imread(img_file)
+        # read in image
+        img_data = cv2.imread(img_file).astype(np.float32)
+        # RGB -> BGR
+        img_data = img_data[:,:,(2,1,0)]
 
         # resize image as desired
         h, w, _ = img_data.shape
-
         if (h < int(desired_h) or w < int(desired_w)):
             img_data = imresize(img_data, (int(desired_h), int(desired_w)))
         else:
@@ -117,7 +119,9 @@ with env.begin(write=True) as txn:
             img_data = img_data[:,:,0]
             img_data = np.expand_dims(img_data, axis=2)
 
+        # HWC -> CHW (N gets added in AddInput function)
         img_for_lmdb = np.transpose(img_data, (2,0,1))
+
 
         # insert correctly sized image
         count = insert_image_to_lmdb(img_for_lmdb,label,count)
