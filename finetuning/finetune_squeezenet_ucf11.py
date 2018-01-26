@@ -2,9 +2,10 @@
 # This script shows how to finetune squeezenet (downloaded from modelzoo) on jpgs
 #   created from UCF11 dataset. Here, finetuning means using squeezenet as a feature
 #   extractor and retraining/reshaping the final layer to output 11 classes rather
-#   than 1001.
+#   than 1000.
 #   In this case, the training and testing data are in lmdbs already, resized to 227x227
 # Adapted from: https://nbviewer.jupyter.org/gist/kyamagu/6cff70840c10ca374e069a3a7eb00cb4
+
 from caffe2.python import core, workspace, model_helper, optimizer, brew
 from caffe2.python.modeling import initializers
 from caffe2.python.modeling.parameter_info import ParameterTags

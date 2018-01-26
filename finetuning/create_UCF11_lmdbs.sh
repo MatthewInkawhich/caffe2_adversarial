@@ -1,0 +1,1 @@
+python ../tools/convert_imageset.py --labels ~/DukeML/datasets/UCF11/TrainDictionary_UCF11_updated_jpg_5FPS.txt --output ~/DukeML/datasets/UCF11/UCF11-lmdb/UCF11-train-lmdb --height 227 --width 227 --shuffle --horizontal_flip

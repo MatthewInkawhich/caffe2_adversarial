@@ -1,5 +1,5 @@
 # NAI
-# This script walks throught the UCF11 jpg dataset that was created with the
+# This script walks through the UCF11 jpg dataset that was created with the
 #   mpg_to_jpgs script and calculates the optical flow images for each adjacent
 #   frame.
 
@@ -9,7 +9,7 @@ import cv2
 
 # ***************************************************************
 # Function to calculate dense optical flow between two adjacent frames
-def calc_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical):
+def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vertical):
 
 	frame1 = cv2.imread(img1)
 	frame2 = cv2.imread(img2)
@@ -25,21 +25,40 @@ def calc_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical):
 	h_oflow = flow[...,0]
 	v_oflow = flow[...,1]
 
-	h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
-	v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
+	print "Before adjustment..."
+	print "max: ",h_oflow.max()
+	print "min: ",h_oflow.min()
+	print "mean: ",h_oflow.mean()
 
-	#print h_oflow.max()
-	#print h_oflow.min()
-	#print h_oflow.mean()
+	#if method == 0:
+		#print "Method 1: recenter"
+		# Recenter the data to 127
+		#h_oflow += 127 
+		#v_oflow += 127
+
+	if method == 1:
+		#print "Method 2: normalize"
+		h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
+		v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
+	#else: 
+	#	print "Abort: unknown method"
+	#	exit()
+
+	print "After adjustment..."
+	print "max: ",h_oflow.max()
+	print "min: ",h_oflow.min()
+	print "mean: ",h_oflow.mean()
+
+	#assert((h_oflow.max() < 256) and (h_oflow.min() > -1))
+	#assert((v_oflow.max() < 256) and (v_oflow.min() > -1))
 
 	cv2.imwrite(ofile_name_horizontal, h_oflow)
 	cv2.imwrite(ofile_name_vertical, v_oflow)
 
 
 
-calc_optical_flow("samples/v_shooting_01_01_f0.jpg","samples/v_shooting_01_01_f6.jpg","h_out.jpg", "v_out.jpg")
-
-exit()
+#calc_optical_flow("samples/v_shooting_01_01_f0.jpg","samples/v_shooting_01_01_f6.jpg","h_out.jpg", "v_out.jpg")
+#exit()
 
 # ***************************************************************
 # MAIN
@@ -47,7 +66,7 @@ exit()
 root_ucf_jpg_directory = os.path.join(os.path.expanduser('~'),"DukeML/datasets/UCF11/UCF11_updated_jpg_5FPS")
 
 # for each subdirectory in root dir [ex. UCF11_updated_mpg/basketball]
-for dir1 in glob.glob(root_jpg_directory + '/*'):
+for dir1 in glob.glob(root_ucf_jpg_directory + '/*'):
 
 	# for each subdirectory in new category level directory [ex. UCF11_updated_mpg/basketball/v_shooting_01]
 	for dir2 in glob.glob(dir1 + "/*"):
@@ -66,8 +85,10 @@ for dir1 in glob.glob(root_jpg_directory + '/*'):
 			#print names
 
 			# create the oflow directory for this scene if it does not exist
-			#if os.path.exists(dir3 + "/oflow") == False:
-			#	os.makedirs(dir3 + "/oflow")
+			if os.path.exists(dir3 + "/oflow_recentered") == False:
+				os.makedirs(dir3 + "/oflow_recentered")
+			if os.path.exists(dir3 + "/oflow_normed") == False:
+				os.makedirs(dir3 + "/oflow_normed")
 
 			# select consecutive pairs of frames to calculate optical flow between
 			for i in range(len(names)-1):
@@ -85,16 +106,26 @@ for dir1 in glob.glob(root_jpg_directory + '/*'):
 
 				in1 = dir3 + "/jpgs/" + frame1
 				in2 = dir3 + "/jpgs/" + frame2
-				in3 = dir3 + "/oflow/" + ofname + "_h.jpg"
-				in4 = dir3 + "/oflow/" + ofname + "_v.jpg"
+				
+				in3 = dir3 + "/oflow_recentered/" + ofname + "_h.jpg"
+				in4 = dir3 + "/oflow_recentered/" + ofname + "_v.jpg"
+				
+				in5 = dir3 + "/oflow_normed/" + ofname + "_h.jpg"
+				in6 = dir3 + "/oflow_normed/" + ofname + "_v.jpg"
 
 				print "\tIn1: ", in1
 				print "\tIn2: ", in2
 				print "\tIn3: ", in3
 				print "\tIn4: ", in4
+				print "\tIn5: ", in5
+				print "\tIn6: ", in6
+
+				calc_optical_flow(in1, in2, 0, in3, in4)
+
+				calc_optical_flow(in1, in2, 1, in5, in6)
 
 			# construct the line to be written to the file
 			# ex. </full/path/to/jpg> <label>
 			#output = img + " " + label
 			#print output
-			exit()
+			#exit()

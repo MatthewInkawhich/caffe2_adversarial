@@ -25,7 +25,7 @@ print "Entering Main..."
 train_lmdb = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnist-lmdb/mnist-train-nchw-lmdb")
 predict_net_out = "mnist_predict_net.pb" # Note: these are in PWD
 init_net_out = "mnist_init_net.pb"
-training_iters = 200
+training_iters = 3
 
 # Make sure the training lmdb exists
 if not os.path.exists(train_lmdb):

@@ -91,6 +91,7 @@ for i,op in enumerate(init_net_proto.op):
 	print type(op.arg[0])
 	print op.arg[0].ints
 
+
 ##################################################################################
 # Add params to the network so we can train
 
