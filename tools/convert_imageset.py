@@ -102,10 +102,8 @@ with env.begin(write=True) as txn:
     for line in content:
         img_file = line.split()[0]
         label = int(line.split()[1])
-        # read in image
+        # read in image (as BGR)
         img_data = cv2.imread(img_file).astype(np.float32)
-        # RGB -> BGR
-        img_data = img_data[:,:,(2,1,0)]
 
         # resize image as desired
         h, w, _ = img_data.shape
@@ -114,7 +112,7 @@ with env.begin(write=True) as txn:
         else:
             img_data = crop_center(img_data, int(desired_h), int(desired_w))
 
-
+        # handle grayscale
         if ((img_data[:,:,0] == img_data[:,:,1]).all() and (img_data[:,:,0] == img_data[:,:,2]).all()):
             img_data = img_data[:,:,0]
             img_data = np.expand_dims(img_data, axis=2)
