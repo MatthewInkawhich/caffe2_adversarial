@@ -19,6 +19,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from caffe2.python.modeling import initializers
+from caffe2.python.modeling.parameter_info import ParameterTags
 from caffe2.python import core,model_helper,net_drawer,optimizer,workspace,visualize,brew,utils
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
@@ -31,7 +33,7 @@ INIT_NET = "mnist_init_net.pb"
 PREDICT_NET = "mnist_predict_net.pb"
 predict_net_out = "UPDATED_mnist_predict_net.pb" # Note: these are in PWD
 init_net_out = "UPDATED_mnist_init_net.pb"
-train_iters = 50
+train_iters = 100
 
 # Make sure the specified inputs exist
 if ((not os.path.exists(TRAIN_LMDB)) or (not os.path.exists(INIT_NET)) or (not os.path.exists(PREDICT_NET))):
@@ -70,10 +72,56 @@ with open(PREDICT_NET, "rb") as f:
 tmp_predict_net = core.Net(predict_net_proto)
 train_model.net = train_model.net.AppendNet(tmp_predict_net)
 
+
+
+# Print some info about the ops contained in the init_net pb
+# This is where we extract the names of the params that must be added to the model
+#	for optimization and where we get the shape of the data for initialization
+print "\n***************** OPS IN INIT NET PROTO *******************"
+for i,op in enumerate(init_net_proto.op):
+	print "\n******************************"
+	print "OP: ", i
+	print "******************************"
+	print "OP_NAME: ",op.name
+	print "OP_TYPE: ",op.type
+	print "OP_INPUT: ",op.input 
+	print "OP_OUTPUT: ",op.output
+	print "OP_OUTPUT[0]: ",op.output[0]
+	print "ATTRS: ", op.arg[0]
+	print type(op.arg[0])
+	print op.arg[0].ints
+
+##################################################################################
+# Add params to the network so we can train
+
+# The required params are in the init net proto. We must extract their names and 
+#	shapes and set them to be externally initialized. We must finally 'create' the 
+# 	param so the optimizer can operate on it
+print "\n***************** INITIALIZING MODEL PARAMS *******************"
+# Want to add all of the op.output[0]'s (except data) as params and initialize them externally
+for i,op in enumerate(init_net_proto.op):
+
+	param_name = op.output[0]
+
+	if param_name != 'data':
+		assert(op.arg[0].name == "shape")
+		print "initializing: ", param_name
+		tags = (ParameterTags.WEIGHT if param_name.endswith("_w") else ParameterTags.BIAS)
+		train_model.create_param(param_name=op.output[0], shape=op.arg[0].ints, initializer=initializers.ExternalInitializer(), tags=tags)
+
+
+train_model.GetAllParams()
+print "\n***************** PRINTING MODEL PARAMS *******************"
+for param in train_model.params:
+	print "PARAM: ",param
+
+#exit()
+
+
+
 ##################################################################################
 # Add the training operators to the model
 
-#print "GOA: ",train_model.gradient_ops_added
 xent = train_model.LabelCrossEntropy(['softmax', 'label'], 'xent')
 loss = train_model.AveragedLoss(xent, 'loss')
 brew.accuracy(train_model, ['softmax', 'label'], 'accuracy')
@@ -82,10 +130,9 @@ opt = optimizer.build_sgd(train_model, base_learning_rate=0.1)
 for param in train_model.GetOptimizationParamInfo():
     opt(train_model.net, train_model.param_init_net, param)
 
-#print "GOA: ",train_model.gradient_ops_added
-#exit()
 
-'''
+
+''' OLD WAY OF SPECIFYING SGD (NOW WE JUST USE THE OPTIMIZER CLASS)
 xent = train_model.LabelCrossEntropy(['softmax','label'], 'xent')
 # compute the expected loss
 loss = train_model.AveragedLoss(xent,"loss")
@@ -118,6 +165,15 @@ for param in train_model.params:
 	train_model.WeightedSum([param, ONE, param_grad, LR], param)
 '''
 
+'''
+# Params that will be optimized during training
+print "\n***************** OPT PARAM INFO *******************"
+print train_model.GetOptimizationParamInfo()
+exit()
+'''
+
+#print "GOA: ",train_model.gradient_ops_added
+
 ##################################################################################
 # Run the training
 
@@ -138,7 +194,12 @@ for i in range(total_iters):
 plt.plot(loss, 'b', label="loss")
 plt.plot(accuracy, 'r', label="accuracy")
 plt.legend(loc="upper right")
+plt.xlabel("Iteration")
+plt.ylabel("Loss and Accuracy")
+plt.title("Loss and Accuracy through training")
 plt.show()
+
+exit()
 
 ##################################################################################
 # Save the retrained model with new pb files

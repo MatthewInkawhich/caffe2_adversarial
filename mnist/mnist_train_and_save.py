@@ -11,7 +11,7 @@ import numpy as np
 import os
 import shutil
 import caffe2.python.predictor.predictor_exporter as pe 
-from caffe2.python import core,model_helper,net_drawer,workspace,visualize,brew,utils
+from caffe2.python import core,model_helper,net_drawer,optimizer,workspace,visualize,brew,utils
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
 
@@ -25,7 +25,7 @@ print "Entering Main..."
 train_lmdb = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnist-lmdb/mnist-train-nchw-lmdb")
 predict_net_out = "mnist_predict_net.pb" # Note: these are in PWD
 init_net_out = "mnist_init_net.pb"
-training_iters = 10
+training_iters = 200
 
 # Make sure the training lmdb exists
 if not os.path.exists(train_lmdb):
@@ -88,7 +88,23 @@ opt = optimizer.build_sgd(train_model, base_learning_rate=0.1)
 for param in train_model.GetOptimizationParamInfo():
     opt(train_model.net, train_model.param_init_net, param)
 
+for i,op in enumerate(train_model.net.Proto().op):
+    print "\n******************************"
+    print "OP: ", i
+    print "******************************"
+    print "OP_NAME: ",op.name
+    print "OP_TYPE: ",op.type
+    print "OP_INPUT: ",op.input
+    print "OP_OUTPUT: ",op.output
 
+print train_model.GetOptimizationParamInfo()
+print "\n***************** PRINTING MODEL PARAMS *******************"
+for param in train_model.params:
+    print "PARAM: ",param
+
+print train_model.params 
+
+#exit()
 '''
 # At this point, the basic architecture of the model exists but none of required operators for training exist.
 # Calculate the cross entropy of the label array with the softmax array
