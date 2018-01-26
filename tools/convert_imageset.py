@@ -92,7 +92,7 @@ with env.begin(write=True) as txn:
             '{}'.format(index).encode('ascii'),
             tensor_protos.SerializeToString()
         )
-        if ((index % 100 == 0)):
+        if ((index % 1000 == 0)):
             print("Inserted {} rows".format(index))
         index = index + 1
         return index
