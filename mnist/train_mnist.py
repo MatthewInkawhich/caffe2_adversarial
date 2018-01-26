@@ -17,14 +17,14 @@ from caffe2.python import core, model_helper, net_drawer, workspace, visualize, 
 # Configs
 ########################################################################
 root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_output') #where bookkeeping files are outputted
-training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'training_lmdb')
-validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'validation_lmdb')
-testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'testing_lmdb')
+training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_training_lmdb')
+validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_validation_lmdb')
+testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_testing_lmdb')
 num_classes = 10                    #number of image classes
 training_net_batch_size = 50        #batch size for training
 validation_images = 2000            #total number of validation images
 testing_images = 2000               #total number of testing images
-training_iters = 1000               #training iterations
+training_iters = 500               #training iterations
 validation_interval = 50            #validate every ... training iterations
 
 ########################################################################
@@ -231,7 +231,8 @@ pyplot.show()
 ########################################################################
 pyplot.figure()
 data = workspace.FetchBlob('data')
-_ = visualize.NCHW.ShowSingle(data[0][0])
+#_ = visualize.NCHW.ShowSingle(data[0][0])
+_ = visualize.NCHW.ShowMultiple(data)
 pyplot.figure()
 softmax = workspace.FetchBlob('softmax')
 _ = pyplot.plot(softmax[0], 'ro')
