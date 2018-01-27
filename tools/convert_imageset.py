@@ -37,7 +37,18 @@ def crop_center(img, new_height, new_width):
     starty = (orig_height//2) - (new_height//2)
     return img[starty:starty+new_height, startx:startx+new_width]
 
+def resize_image(img, new_height, new_width):
+    h, w, _ = img.shape
+    if (h < new_height or w < new_width):
+        img_data_r = imresize(img_data, (new_height, new_width))
+    else:
+        img_data_r = crop_center(img, new_height, new_width)
+    return img_data_r
 
+def handle_greyscale(img):
+    img = img[:,:,0]
+    img = np.expand_dims(img, axis=2)
+    return img
 
 
 # handle command line arguments
@@ -106,20 +117,14 @@ with env.begin(write=True) as txn:
         img_data = cv2.imread(img_file).astype(np.float32)
 
         # resize image as desired
-        h, w, _ = img_data.shape
-        if (h < desired_h or w < desired_w):
-            img_data_r = imresize(img_data, (desired_h, desired_w))
-        else:
-            img_data_r = crop_center(img_data, desired_h, desired_w)
+        img_data_r = resize_image(img_data, desired_h, desired_w)
 
         # handle grayscale
         if ((img_data_r[:,:,0] == img_data_r[:,:,1]).all() and (img_data_r[:,:,0] == img_data_r[:,:,2]).all()):
-            img_data_r = img_data_r[:,:,0]
-            img_data_r = np.expand_dims(img_data_r, axis=2)
+            img_data_r = handle_greyscale(img_data_r)
 
         # HWC -> CHW (N gets added in AddInput function)
         img_for_lmdb = np.transpose(img_data_r, (2,0,1))
-
 
         # insert correctly sized image
         count = insert_image_to_lmdb(img_for_lmdb,label,count)
@@ -133,8 +138,8 @@ with env.begin(write=True) as txn:
             p_limit = int(permutations)
             used_pairs = []
             p = 0
+            h, w, _ = img_data.shape
             if (h > desired_h and w > desired_w):
-                #print("made it!!!")
                 x_play = w - desired_w
                 y_play = h - desired_h
                 while (p < p_limit):
@@ -142,8 +147,15 @@ with env.begin(write=True) as txn:
                     tl_y = random.randint(0, y_play)
                     if (tl_x, tl_y) not in used_pairs:
                         p_img = img_data[tl_y:tl_y+desired_h, tl_x:tl_x+desired_w]
-                        used_pairs.append((tl_x, tl_y))
+                        # handle grayscale
+                        if ((p_img[:,:,0] == p_img[:,:,1]).all() and (p_img[:,:,0] == p_img[:,:,2]).all()):
+                            p_img = handle_greyscale(p_img)
+                        # HWC -> CHW (N gets added in AddInput function)
+                        p_img_for_lmdb = np.transpose(p_img, (2,0,1))
+                        # insert processed permutation image
                         count = insert_image_to_lmdb(p_img, label, count)
+                        # add used pair to list and increment permutation count
+                        used_pairs.append((tl_x, tl_y))
                         p = p + 1
 
 
