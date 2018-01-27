@@ -55,8 +55,8 @@ args = vars(parser.parse_args())
 label_file = args['labels']
 output = args['output']
 shuffle = args['shuffle']
-desired_h = args['height']
-desired_w = args['width']
+desired_h = int(args['height'])
+desired_w = int(args['width'])
 horizontal_flip = args['horizontal_flip']
 permutations = args['permutations']
 
@@ -107,28 +107,45 @@ with env.begin(write=True) as txn:
 
         # resize image as desired
         h, w, _ = img_data.shape
-        if (h < int(desired_h) or w < int(desired_w)):
-            img_data = imresize(img_data, (int(desired_h), int(desired_w)))
+        if (h < desired_h or w < desired_w):
+            img_data_r = imresize(img_data, (desired_h, desired_w))
         else:
-            img_data = crop_center(img_data, int(desired_h), int(desired_w))
+            img_data_r = crop_center(img_data, desired_h, desired_w)
 
         # handle grayscale
-        if ((img_data[:,:,0] == img_data[:,:,1]).all() and (img_data[:,:,0] == img_data[:,:,2]).all()):
-            img_data = img_data[:,:,0]
-            img_data = np.expand_dims(img_data, axis=2)
+        if ((img_data_r[:,:,0] == img_data_r[:,:,1]).all() and (img_data_r[:,:,0] == img_data_r[:,:,2]).all()):
+            img_data_r = img_data_r[:,:,0]
+            img_data_r = np.expand_dims(img_data_r, axis=2)
 
         # HWC -> CHW (N gets added in AddInput function)
-        img_for_lmdb = np.transpose(img_data, (2,0,1))
+        img_for_lmdb = np.transpose(img_data_r, (2,0,1))
 
 
         # insert correctly sized image
         count = insert_image_to_lmdb(img_for_lmdb,label,count)
 
-        # insert horizontally flipped version if flag was set
+        # insert horizontally flipped version (if flag was set)
         if (horizontal_flip):
             count = insert_image_to_lmdb(np.fliplr(img_for_lmdb), label, count)
 
-        #if (permutations):
+        # insert permutation images (if flag was set)
+        if (permutations):
+            p_limit = int(permutations)
+            used_pairs = []
+            p = 0
+            if (h > desired_h and w > desired_w):
+                #print("made it!!!")
+                x_play = w - desired_w
+                y_play = h - desired_h
+                while (p < p_limit):
+                    tl_x = random.randint(0, x_play)
+                    tl_y = random.randint(0, y_play)
+                    if (tl_x, tl_y) not in used_pairs:
+                        p_img = img_data[tl_y:tl_y+desired_h, tl_x:tl_x+desired_w]
+                        used_pairs.append((tl_x, tl_y))
+                        count = insert_image_to_lmdb(p_img, label, count)
+                        p = p + 1
+
 
 
 
