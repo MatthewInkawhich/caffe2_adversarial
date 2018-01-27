@@ -92,6 +92,10 @@ for i,op in enumerate(init_net_proto.op):
 	print op.arg[0].ints
 
 
+print "&&&&&&&&&&&&&"
+print train_model.GetAllParams()
+
+
 ##################################################################################
 # Add params to the network so we can train
 
@@ -111,12 +115,14 @@ for i,op in enumerate(init_net_proto.op):
 		train_model.create_param(param_name=op.output[0], shape=op.arg[0].ints, initializer=initializers.ExternalInitializer(), tags=tags)
 
 
-train_model.GetAllParams()
+print "&&&&&&&&&&&&&"
+print train_model.GetAllParams()
+
 print "\n***************** PRINTING MODEL PARAMS *******************"
 for param in train_model.params:
 	print "PARAM: ",param
 
-#exit()
+exit()
 
 
 
