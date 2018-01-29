@@ -13,6 +13,7 @@
 # limitations under the License.
 ##############################################################################
 
+# Adapted by MatthewInkawhich
 ## @package lmdb_create_example
 # Module caffe2.python.examples.lmdb_create_example
 from __future__ import absolute_import
