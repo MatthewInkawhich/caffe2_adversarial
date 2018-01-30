@@ -30,8 +30,12 @@ with open(pb_loc, "rb") as f:
 pred_net = core.Net(net_proto)
 
 # print the net's prototxt to stdout
-#print str(pred_net.Proto())
+print str(pred_net.Proto())
 
+exit()
+
+
+# Use this to look at init_net stuff
 for i,op in enumerate(net_proto.op):
 	print "\n******************************"
 	print "OP: ", i
@@ -39,7 +43,9 @@ for i,op in enumerate(net_proto.op):
 	print "OP_NAME: ",op.name
 	print "OP_INPUT: ",op.input 
 	print "OP_OUTPUT: ",op.output
-	print "OP_SHAPE: ",op.arg[0]
+	if len(op.arg)>0:
+		assert(op.arg[0].name == "shape")
+		print "OP_SHAPE: ",op.arg[0]
 
 
 

@@ -289,33 +289,6 @@ for epoch in range(5):
 
 exit()
 
-'''
-##################################################################################
-# Run the training
-
-workspace.RunNetOnce(my_model.param_init_net)
-workspace.CreateNet(my_model.net, overwrite=True)
-
-total_iters = train_iters
-accuracy = np.zeros(total_iters)
-loss = np.zeros(total_iters)
-
-for i in range(total_iters):
-	workspace.RunNet(my_model.net)
-	accuracy[i] = workspace.FetchBlob('accuracy')
-	loss[i] = workspace.FetchBlob('loss')
-	print "accuracy: ", accuracy[i]
-	print "loss: ", loss[i]
-
-plt.plot(loss, 'b', label="loss")
-plt.plot(accuracy, 'r', label="accuracy")
-plt.legend(loc="upper right")
-plt.show()
-
-exit()
-
-'''
-
 ##################################################################################
 # Save the newly finetuned model
 deploy_model = model_helper.ModelHelper("finetuned_squeezenet_ucf11_deploy", arg_scope=arg_scope, init_params=False)

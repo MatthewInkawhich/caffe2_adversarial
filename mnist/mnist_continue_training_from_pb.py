@@ -92,8 +92,7 @@ for i,op in enumerate(init_net_proto.op):
 	print op.arg[0].ints
 
 
-print "&&&&&&&&&&&&&"
-print train_model.GetAllParams()
+#print train_model.GetAllParams()
 
 
 ##################################################################################
