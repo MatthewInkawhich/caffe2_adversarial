@@ -1,3 +1,4 @@
+# MatthewInkawhich
 # Use this script to train a simple MNIST net on the lmdbs of your choice and save the trained model
 # LINES TO MODIFY:
 #   - Must manually set Configs
@@ -12,11 +13,16 @@ import os
 import shutil
 import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core, model_helper, net_drawer, workspace, visualize, brew, optimizer
+from caffe2.proto import caffe2_pb2
+from caffe2.python.predictor import mobile_exporter
 
 ########################################################################
 # Configs
 ########################################################################
 root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_output') #where bookkeeping files are outputted
+save_trained_model_loc = root_folder
+init_net_out = os.path.join(save_trained_model_loc, 'mnist_init_net.pb')
+predict_net_out = os.path.join(save_trained_model_loc, 'mnist_predict_net.pb')
 training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_training_lmdb')
 validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_validation_lmdb')
 testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_testing_lmdb')
@@ -257,4 +263,13 @@ print('\ntest_accuracy: %f' % test_accuracy)
 ########################################################################
 # Save deploy model with trained weights and biases
 ########################################################################
-# ... TO DO NATE ...
+print("\n\nSaving the trained model to " + save_trained_model_loc)
+# Use the MOBILE EXPORTER to save the deploy model as pbs
+# https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
+workspace.RunNetOnce(deploy_model.param_init_net)
+workspace.CreateNet(deploy_model.net, overwrite=True)
+init_net, predict_net = mobile_exporter.Export(workspace, deploy_model.net, deploy_model.params)
+with open(init_net_out, 'wb') as f:
+    f.write(init_net.SerializeToString())
+with open(predict_net_out, 'wb') as f:
+    f.write(predict_net.SerializeToString())
