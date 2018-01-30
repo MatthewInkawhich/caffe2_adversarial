@@ -110,9 +110,14 @@ def AddTrainingOperators(model, softmax, label):
     # use the average loss we just computed to add gradient operators to the model
     model.AddGradientOperators([loss])
     # do a simple stochastic gradient descent
-    opt = optimizer.build_sgd(model, base_learning_rate=0.1)
-    for param in model.GetOptimizationParamInfo():
-        opt(model.net, model.param_init_net, param)
+    optimizer.build_sgd(
+        model,
+        base_learning_rate=0.1,
+        policy="step",
+        stepsize=1,
+        gamma=0.999,
+    )
+
 
 
 # collects stats to inspect later
