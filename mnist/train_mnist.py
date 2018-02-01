@@ -160,6 +160,7 @@ softmax = AddLeNetModel(train_model, data)
 AddTrainingOperators(train_model, softmax, label)
 AddBookkeepingOperators(train_model)
 
+
 # Validation model
 val_model = model_helper.ModelHelper(
     name="val_net", arg_scope=arg_scope, init_params=False)
@@ -170,6 +171,7 @@ data, label = AddInput(
 softmax = AddLeNetModel(val_model, data)
 AddAccuracy(val_model, softmax, label)
 
+
 # Testing model
 test_model = model_helper.ModelHelper(
     name="test_net", arg_scope=arg_scope, init_params=False)
@@ -179,6 +181,11 @@ data, label = AddInput(
     db_type='lmdb')
 softmax = AddLeNetModel(test_model, data)
 AddAccuracy(test_model, softmax, label)
+
+print("###### Hello!!")
+print("Params and grads:")
+for param, grad in test_model.param_to_grad.items():
+    print(str(param) + ', ' + str(grad))
 
 # Deployment model
 deploy_model = model_helper.ModelHelper(
@@ -268,13 +275,13 @@ print('\ntest_accuracy: %f' % test_accuracy)
 ########################################################################
 # Save deploy model with trained weights and biases
 ########################################################################
-print("\n\nSaving the trained model to " + save_trained_model_loc)
-# Use the MOBILE EXPORTER to save the deploy model as pbs
-# https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
-workspace.RunNetOnce(deploy_model.param_init_net)
-workspace.CreateNet(deploy_model.net, overwrite=True)
-init_net, predict_net = mobile_exporter.Export(workspace, deploy_model.net, deploy_model.params)
-with open(init_net_out, 'wb') as f:
-    f.write(init_net.SerializeToString())
-with open(predict_net_out, 'wb') as f:
-    f.write(predict_net.SerializeToString())
+# print("\n\nSaving the trained model to " + save_trained_model_loc)
+# # Use the MOBILE EXPORTER to save the deploy model as pbs
+# # https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
+# workspace.RunNetOnce(deploy_model.param_init_net)
+# workspace.CreateNet(deploy_model.net, overwrite=True)
+# init_net, predict_net = mobile_exporter.Export(workspace, deploy_model.net, deploy_model.params)
+# with open(init_net_out, 'wb') as f:
+#     f.write(init_net.SerializeToString())
+# with open(predict_net_out, 'wb') as f:
+#     f.write(predict_net.SerializeToString())
