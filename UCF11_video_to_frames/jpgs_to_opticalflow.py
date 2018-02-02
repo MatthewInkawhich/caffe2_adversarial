@@ -7,10 +7,14 @@ import os
 import glob
 import cv2
 
+# count = 0
+# oob_count = 0
+
 # ***************************************************************
 # Function to calculate dense optical flow between two adjacent frames
 def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vertical):
-
+	# global count
+	# count += 1
 	frame1 = cv2.imread(img1)
 	frame2 = cv2.imread(img2)
 
@@ -20,7 +24,8 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
 	# calculate dense optical flow
 	# settings from tutorial
 	# https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
-	flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+	#flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+	flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
 
 	h_oflow = flow[...,0]
 	v_oflow = flow[...,1]
@@ -30,17 +35,23 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
 	print "min: ",h_oflow.min()
 	print "mean: ",h_oflow.mean()
 
-	#if method == 0:
+	if method == 0:
 		#print "Method 1: recenter"
 		# Recenter the data to 127
-		#h_oflow += 127 
-		#v_oflow += 127
+		h_oflow += 127
+		v_oflow += 127
+		#if h_oflow.max() > 255 or h_oflow.min() < 0 or v_oflow.max() > 255 or v_oflow.min() < 0:
+			# global oob_count
+			# oob_count += 1
+		h_oflow[h_oflow < 0] = 0
+		v_oflow[v_oflow > 255] = 255
 
-	if method == 1:
-		#print "Method 2: normalize"
-		h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
-		v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
-	#else: 
+
+	# if method == 1:
+	# 	#print "Method 2: normalize"
+	# 	h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
+	# 	v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
+	#else:
 	#	print "Abort: unknown method"
 	#	exit()
 
@@ -85,10 +96,10 @@ for dir1 in glob.glob(root_ucf_jpg_directory + '/*'):
 			#print names
 
 			# create the oflow directory for this scene if it does not exist
-			if os.path.exists(dir3 + "/oflow_recentered") == False:
-				os.makedirs(dir3 + "/oflow_recentered")
-			if os.path.exists(dir3 + "/oflow_normed") == False:
-				os.makedirs(dir3 + "/oflow_normed")
+			#if os.path.exists(dir3 + "/oflow_recentered") == False:
+				#os.makedirs(dir3 + "/oflow_recentered")
+			#if os.path.exists(dir3 + "/oflow_normed") == False:
+				#os.makedirs(dir3 + "/oflow_normed")
 
 			# select consecutive pairs of frames to calculate optical flow between
 			for i in range(len(names)-1):
@@ -106,10 +117,10 @@ for dir1 in glob.glob(root_ucf_jpg_directory + '/*'):
 
 				in1 = dir3 + "/jpgs/" + frame1
 				in2 = dir3 + "/jpgs/" + frame2
-				
+
 				in3 = dir3 + "/oflow_recentered/" + ofname + "_h.jpg"
 				in4 = dir3 + "/oflow_recentered/" + ofname + "_v.jpg"
-				
+
 				in5 = dir3 + "/oflow_normed/" + ofname + "_h.jpg"
 				in6 = dir3 + "/oflow_normed/" + ofname + "_v.jpg"
 
@@ -120,12 +131,18 @@ for dir1 in glob.glob(root_ucf_jpg_directory + '/*'):
 				print "\tIn5: ", in5
 				print "\tIn6: ", in6
 
-				calc_optical_flow(in1, in2, 0, in3, in4)
+		        # Not normalized
+		        calc_optical_flow(in1, in2, 0, in3, in4)
 
-				calc_optical_flow(in1, in2, 1, in5, in6)
+		        # Normalized
+				#calc_optical_flow(in1, in2, 1, in5, in6)
 
 			# construct the line to be written to the file
 			# ex. </full/path/to/jpg> <label>
 			#output = img + " " + label
 			#print output
 			#exit()
+
+# print('\n\n')
+# print 'Total:', count
+# print 'Out of bounds:', oob_count

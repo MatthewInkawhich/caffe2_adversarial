@@ -32,8 +32,8 @@ def print_softmax(sorted_softmax):
 #########################################################################
 ### Handle inputs and configs
 #########################################################################
-epsilon = .20
-TEST_LMDB = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_10_lmdb')
+epsilon = .30
+TEST_LMDB = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'test_lmdb')
 INIT_NET = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_init_net.pb')
 PREDICT_NET = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_predict_net.pb')
 
@@ -123,8 +123,8 @@ for _ in range(num_images):
 
     ##### If initial prediction is incorrect, no need to attack
     if (sorted_softmax[0][0] != label[0]):
-        print("INCORRECT INITIAL PREDICTION; EXITING")
-        exit()
+        print("INCORRECT INITIAL PREDICTION; SKIPPING IMAGE")
+        continue
 
     # if initial prediction is correct, increment total
     total += 1
@@ -169,6 +169,11 @@ for _ in range(num_images):
     # axarr[0].imshow(I, cmap='gray')
     # axarr[1].imshow(fgs_img, cmap='gray')
     # plt.show()
+    plt.imshow(fgs_img, cmap='gray')
+    plt.axis('off')
+    #plt.savefig("~/DukeML/junk/im" + str(total) + ".png")
+    plt.show()
+    continue
 
 
     # Classify FGSM image
@@ -187,4 +192,4 @@ for _ in range(num_images):
     if results[0][0] != label[0]:
         success += 1
 
-print('\n\nSuccess rate: ' + '{0:.2f}'.format(success/total))
+print('\n\nSuccess rate: ' + str(success) + '/' + str(total) + '\t' '{0:.2f}'.format(success/total))
