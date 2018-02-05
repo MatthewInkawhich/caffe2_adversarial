@@ -19,19 +19,20 @@ from caffe2.python.predictor import mobile_exporter
 ########################################################################
 # Configs
 ########################################################################
-root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_output') #where bookkeeping files are outputted
+root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_output') #where bookkeeping files are outputted
 save_trained_model_loc = root_folder
-init_net_out = os.path.join(save_trained_model_loc, 'mnist_init_net.pb')
-predict_net_out = os.path.join(save_trained_model_loc, 'mnist_predict_net.pb')
-training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_training_lmdb')
-validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_validation_lmdb')
-testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_testing_lmdb')
-num_classes = 10                    #number of image classes
+init_net_out = os.path.join(save_trained_model_loc, 'mstar_init_net.pb')
+predict_net_out = os.path.join(save_trained_model_loc, 'mstar_predict_net.pb')
+training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar64', 'train_lmdb')
+validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar64', 'validate_lmdb')
+testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar64', 'test_lmdb')
+num_classes = 8                   #number of image classes
 training_net_batch_size = 50        #batch size for training
-validation_images = 2000            #total number of validation images
-testing_images = 2000               #total number of testing images
 training_iters = 500               #training iterations
-validation_interval = 50            #validate every ... training iterations
+validation_images = 452            #total number of validation images
+validation_interval = 25            #validate every ... training iterations
+testing_images = 442               #total number of testing images
+
 
 ########################################################################
 # create root_folder if not already there
@@ -74,18 +75,27 @@ def AddLeNetModel(model, data):
     each side in half.
     '''
 
-    # Image size: 28 x 28 -> 24 x 24
+
     ############# Change dim_in value if images are more than 1 color channel
-    conv1 = brew.conv(model, data, 'conv1', dim_in=1, dim_out=20, kernel=5)
-    # Image size: 24 x 24 -> 12 x 12
+    # Image size: 64x64
+    conv1 = brew.conv(model, data, 'conv1', dim_in=1, dim_out=32, kernel=5)
+    # Image size: 60x60
     pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
-    # Image size: 12 x 12 -> 8 x 8
-    conv2 = brew.conv(model, pool1, 'conv2', dim_in=20, dim_out=50, kernel=5)
-    # Image size: 8 x 8 -> 4 x 4
+    relu1 = brew.relu(model, pool1, 'relu1')
+    # Image size: 30x30
+    conv2 = brew.conv(model, relu1, 'conv2', dim_in=32, dim_out=64, kernel=5)
+    # Image size: 26x26
     pool2 = brew.max_pool(model, conv2, 'pool2', kernel=2, stride=2)
+    relu2 = brew.relu(model, pool2, 'relu2')
+    # Image size: 13x13
+    conv3 = brew.conv(model, relu2, 'conv3', dim_in=64, dim_out=64, kernel=5)
+    # Image size: 9x9
+    pool3 = brew.max_pool(model, conv3, 'pool3', kernel=2, stride=2)
+    relu3 = brew.relu(model, pool3, 'relu3')
+    # Image size: 4x4
     # 50 * 4 * 4 stands for dim_out from previous layer multiplied by the image size
     ############# Change dim_in value if images are not 28x28
-    fc3 = brew.fc(model, pool2, 'fc3', dim_in=50 * 4 * 4, dim_out=500)
+    fc3 = brew.fc(model, relu3, 'fc3', dim_in=64 * 4 * 4, dim_out=500)
     fc3 = brew.relu(model, fc3, fc3)
     pred = brew.fc(model, fc3, 'pred', 500, num_classes)
     softmax = brew.softmax(model, pred, 'softmax')
@@ -182,10 +192,6 @@ data, label = AddInput(
 softmax = AddLeNetModel(test_model, data)
 AddAccuracy(test_model, softmax, label)
 
-print("###### Hello!!")
-print("Params and grads:")
-for param, grad in test_model.param_to_grad.items():
-    print(str(param) + ', ' + str(grad))
 
 # Deployment model
 deploy_model = model_helper.ModelHelper(

@@ -7,10 +7,10 @@
 # import dependencies
 print "Import Dependencies..."
 from matplotlib import pyplot
-import numpy as np 
+import numpy as np
 import os
 import shutil
-import caffe2.python.predictor.predictor_exporter as pe 
+import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core,model_helper,net_drawer,optimizer,workspace,visualize,brew,utils
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
@@ -25,7 +25,7 @@ print "Entering Main..."
 train_lmdb = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnist-lmdb/mnist-train-nchw-lmdb")
 predict_net_out = "mnist_predict_net.pb" # Note: these are in PWD
 init_net_out = "mnist_init_net.pb"
-training_iters = 100
+training_iters = 500
 
 # Make sure the training lmdb exists
 if not os.path.exists(train_lmdb):
@@ -102,7 +102,7 @@ print "\n***************** PRINTING MODEL PARAMS *******************"
 for param in train_model.params:
     print "PARAM: ",param
 
-print train_model.params 
+print train_model.params
 
 #exit()
 '''
@@ -185,8 +185,3 @@ with open(predict_net_out, 'wb') as f:
     f.write(predict_net.SerializeToString())
 
 print "Done, exiting..."
-
-
-
-
-
