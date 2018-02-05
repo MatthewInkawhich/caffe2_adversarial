@@ -1,8 +1,7 @@
 # NAI
-# This is the basic MNIST tutorial from the caffe2 documentation
-# 	trimmed down to only what is needed for training and saving the pb file.
-#   The original tutorial has been decomposed into a single sequential program
-#   for better understanding.
+# This is meant to show how we periodically save checkpoints during training.
+# This script will go with another script that shows how to restore training from
+#  	a saved checkpoint.
 
 # import dependencies
 print "Import Dependencies..."
@@ -23,9 +22,8 @@ print "Entering Main..."
 ##################################################################################
 # Gather Inputs
 train_lmdb = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnist-lmdb/mnist-train-nchw-lmdb")
-predict_net_out = "mnist_predict_net.pb" # Note: these are in PWD
-init_net_out = "mnist_init_net.pb"
-training_iters = 100
+training_iters = 10
+checkpoint_iters = 5
 
 # Make sure the training lmdb exists
 if not os.path.exists(train_lmdb):
@@ -88,57 +86,11 @@ opt = optimizer.build_sgd(train_model, base_learning_rate=0.1)
 for param in train_model.GetOptimizationParamInfo():
     opt(train_model.net, train_model.param_init_net, param)
 
-for i,op in enumerate(train_model.net.Proto().op):
-    print "\n******************************"
-    print "OP: ", i
-    print "******************************"
-    print "OP_NAME: ",op.name
-    print "OP_TYPE: ",op.type
-    print "OP_INPUT: ",op.input
-    print "OP_OUTPUT: ",op.output
 
-print train_model.GetOptimizationParamInfo()
-print "\n***************** PRINTING MODEL PARAMS *******************"
-for param in train_model.params:
-    print "PARAM: ",param
 
-print train_model.params 
-
-#exit()
-'''
-# At this point, the basic architecture of the model exists but none of required operators for training exist.
-# Calculate the cross entropy of the label array with the softmax array
-xent = train_model.LabelCrossEntropy(['softmax','label'], 'xent')
-# compute the expected loss
-loss = train_model.AveragedLoss(xent,"loss")
-# track the accuracy of the model by adding the accuracy operator to the model
-# this is a bookkeeping operator and is not required for operation
-accuracy = brew.accuracy(train_model, ['softmax','label'], 'accuracy')
-# *** KEY: add the gradient operators to the model ***
-# use the average loss to add gradient operators to the model
-# gradient is computed with respect to the loss which was just computed
-train_model.AddGradientOperators(['loss'])
-# BEGIN SGD ALGO...
-# do a simple stochastic gradient descent
-# iter op is a counter for the number of iterations run in training
+#model.Checkpoint([ITER] + model.params, [], db="mnist_lenet_checkpoint_%05d.lmdb", db_type="lmdb", every=20)
 ITER = brew.iter(train_model, "iter")
-# set the learning rate schedule to lr = base_lr * (t^gamma)
-LR = train_model.LearningRate(ITER,"LR", base_lr=-0.1, policy="step", stepsize=1, gamma=0.999)
-# Define the constant ONE which will be used in the gradient update. Since this never needs to be created
-# again, we can explicitly place it in the param_init_net
-ONE = train_model.param_init_net.ConstantFill([],"ONE", shape=[1], value=1.0)
-# Now, for each parameter in the model, do the gradinet updates
-# The update is a simple weighted sum: param = param + param_grad*LR
-for param in train_model.params:
-	# Note, we used the model helper class to easily access the params of the model
-	param_grad = train_model.param_to_grad[param]
-	# Element-wise weighted sum of several data, weight tensor pairs.
-	# Input should be in the form X_0, weight_0, X_1, weight_1, ... where X_i all
-	# have the same shape, and weight_i are size 1 tensors that specifies the weight
-	# of each vector
-	# param = param + param_grad*LR
-	train_model.WeightedSum([param, ONE, param_grad, LR], param)
-'''
+train_model.Checkpoint([ITER] + train_model.params, [], db="mnist_lenet_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
 
 ##################################################################################
 #### Run the training procedure
@@ -163,26 +115,6 @@ pyplot.plot(loss,'b', label='loss')
 pyplot.plot(accuracy,'r', label='accuracy')
 pyplot.legend(loc='upper right')
 pyplot.show()
-
-##################################################################################
-#### Save the trained model for testing later
-
-# save as two protobuf files (predict_net.pb and init_net.pb)
-# predict_net.pb defines the architecture of the network
-# init_net.pb defines the network params/weights
-print "Saving the trained model to predict/init.pb files"
-deploy_model = model_helper.ModelHelper(name="mnist_deploy", arg_scope=arg_scope, init_params=False)
-AddLeNetModel(deploy_model, "data")
-
-# Use the MOBILE EXPORTER to save the deploy model as pbs
-# https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
-workspace.RunNetOnce(deploy_model.param_init_net)
-workspace.CreateNet(deploy_model.net, overwrite=True) # (?)
-init_net, predict_net = mobile_exporter.Export(workspace, deploy_model.net, deploy_model.params)
-with open(init_net_out, 'wb') as f:
-    f.write(init_net.SerializeToString())
-with open(predict_net_out, 'wb') as f:
-    f.write(predict_net.SerializeToString())
 
 print "Done, exiting..."
 

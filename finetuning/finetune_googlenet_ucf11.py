@@ -76,7 +76,7 @@ for op in init_net_proto.op:
 # Print the params to learn in the ops of the init net. When you find one that is in
 #   params_to_learn, mark the index and we will delete it later.
 indx_to_remove = []
-for i in range(116):
+for i in range(len(init_net_proto.op)):
     print "\n******************************"
     print "OP: ", i
     print "******************************"
@@ -87,13 +87,16 @@ for i in range(116):
         indx_to_remove.append(i)
     print "OP_SHAPE: ",init_net_proto.op[i].arg[0]
 
-print indx_to_remove
+
+print "Index to remove:",indx_to_remove
 
 #exit()
 
 #print indx_to_remove
-for i in indx_to_remove:
-    init_net_proto.op.pop(i)
+#for i in indx_to_remove:
+#    init_net_proto.op.pop(i)
+init_net_proto.op.pop(115)
+init_net_proto.op.pop(114)
 
 # create a temporary net for the init net
 out_dim = 11 # new number of classes
@@ -111,14 +114,35 @@ my_model.param_init_net = my_model.param_init_net.AppendNet(tmp_init_net)
 my_model.param_init_net.XavierFill([],'loss3/classifier_w',shape=[out_dim, 1024])
 my_model.param_init_net.ConstantFill([], 'loss3/classifier_b', shape=[out_dim])
 
+#i = my_model.StopGradient('inception_5b/pool_proj_w','inception_5b/pool_proj_w')
 
+# Print the new init net to see that the shape has changed
+for i in range(len(my_model.param_init_net.Proto().op)):
+    print "\n******************************"
+    print "OP: ", i
+    print "******************************"
+    print "OP_NAME: ",my_model.param_init_net.Proto().op[i].name
+    print "OP_INPUT: ",my_model.param_init_net.Proto().op[i].input 
+    print "OP_OUTPUT: ",my_model.param_init_net.Proto().op[i].output
+    print "OP_SHAPE: ",my_model.param_init_net.Proto().op[i].arg[0]
+
+for param in my_model.params:
+    print param
+
+tmp = workspace.InferShapesAndTypes([my_model.param_init_net])
+for t in tmp[0]:
+    print t
+
+#exit()
+
+workspace.ResetWorkspace()
 
 ##################################################################################
 # Add the training operators
 xent = my_model.LabelCrossEntropy(['prob', 'label'], 'xent')
 loss = my_model.AveragedLoss('xent', 'loss')
 brew.accuracy(my_model, ['prob', 'label'], 'accuracy')
-my_model.AddGradientOperators([loss])
+my_model.AddGradientOperators(['loss'])
 opt = optimizer.build_sgd(my_model, base_learning_rate=0.1)
 for param in my_model.GetOptimizationParamInfo():
     opt(my_model.net, my_model.param_init_net, param)

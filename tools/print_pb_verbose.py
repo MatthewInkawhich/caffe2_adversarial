@@ -30,9 +30,9 @@ with open(pb_loc, "rb") as f:
 pred_net = core.Net(net_proto)
 
 # print the net's prototxt to stdout
-print str(pred_net.Proto())
+#print str(pred_net.Proto())
 
-exit()
+#exit()
 
 
 # Use this to look at init_net stuff

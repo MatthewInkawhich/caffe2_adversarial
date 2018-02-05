@@ -41,7 +41,7 @@ my_model = model_helper.ModelHelper(name="squeezenet_for_ucf11", arg_scope=arg_s
 
 ##################################################################################
 # Add the data layer for the train lmdb
-data_uint8, label = my_model.TensorProtosDBInput([], ['data_uint8', 'label'], batch_size=10, db=TRAIN_LMDB, db_type='lmdb')
+data_uint8, label = my_model.TensorProtosDBInput([], ['data_uint8', 'label'], batch_size=100, db=TRAIN_LMDB, db_type='lmdb')
 data = my_model.Cast(data_uint8, 'data', to=core.DataType.FLOAT)
 data = my_model.Scale(data, data, scale=float(1./256.))
 # enforce a stopgradient because we do not need the gradient of the data for the backward pass

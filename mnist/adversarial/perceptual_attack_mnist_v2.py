@@ -1,3 +1,9 @@
+# NAI
+# This version is an adaptation of the original.  In the original version, there was
+# no effort to maintain the bound of the image from [0,1], so it tended to perturb
+# past this bound. This version will make sure that the original bound of [0,1] is
+# maintained.
+
 import numpy as np 
 import os
 import skimage.io
@@ -6,6 +12,8 @@ from caffe2.python import workspace
 import operator
 from operator import itemgetter
 import matplotlib.pyplot as plt
+
+PREDICTION_COUNT = 0
 
 #########################################################
 # print_img
@@ -86,6 +94,10 @@ def predict(predictor_obj, img):
 
 	#print "results: ",results
 
+		# Increment the global counter
+	global PREDICTION_COUNT 
+	PREDICTION_COUNT += 1
+
 	return results
 
 #########################################################
@@ -118,7 +130,7 @@ def gap_fxn(predictor_obj, img, target_class):
 # Calculates the perturb priority for every pixel in the img and
 #	returns a matrix of the priorities of the same dimensionality
 #	of the input img
-def perturb_priority(predictor_obj, img, target_class):
+def perturb_priority(predictor_obj, img, target_class, do_not_touch ):
 
 	# Run the gap fxn for the input img
 	orig_gap = gap_fxn(predictor_obj, img, target_class)
@@ -154,6 +166,11 @@ def perturb_priority(predictor_obj, img, target_class):
 			perturb_priority_map[i,j] = gradient_gap/tmp_sens
 			#print "pert priority [{}, {}] = {}".format(i,j,perturb_priority_map[i,j])
 
+	# for each of the do not touch locations, set there perturb priority to zero so they
+	# will not get picked to be perturbed
+	for loc in do_not_touch:
+		perturb_priority_map[loc[0], loc[1]] = 0
+
 	return perturb_priority_map, sens_map
 
 def get_coords_of_n_largest(mat, n):
@@ -180,9 +197,9 @@ def get_coords_of_n_largest(mat, n):
 # Inputs
 init_net_loc = "../mnist_init_net.pb"
 pred_net_loc = "../mnist_predict_net.pb"
-input_img = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnistasjpg/testSample/img_21.jpg")
-orig_class = 9 # correct class of the input image
-target_class = 8 # target class of the adversarial image
+input_img = os.path.join(os.path.expanduser('~'),"DukeML/datasets/mnist/mnistasjpg/testSample/img_239.jpg")
+orig_class = 8 # correct class of the input image
+target_class = 3 # target class of the adversarial image
 D_max = 20 # max allowed human perceptual distance
 m = 20 # number of pixels perturbed in each iteration
 delta = 0.01 # perturbation magnitude
@@ -215,21 +232,44 @@ delta_map = np.zeros(shape=img.shape)
 # save the original image
 orig_img = np.copy(img)
 
+do_not_touch_locs = []
+
 cnt = 0
 pred = orig_class
 
 while(cnt < MAX_ITERS):
 
 	# Calculate the perturbation priority of all pixels for the current image
-	perturb_priority_map, sensitivity_map = perturb_priority(p, img, target_class)
+	perturb_priority_map, sensitivity_map = perturb_priority(p, img, target_class, do_not_touch_locs)
 
 	# Get the coordinates of the largest n perturbation priorities
 	selected_pixels = get_coords_of_n_largest(perturb_priority_map, m)
 
 	# Perturb the selected pixel coordinates
 	for s in selected_pixels:
-		delta_map[s[0],s[1]] += delta
-		img[s[0],s[1]] += delta 
+
+		# Check if the perturbation will push the value outside of the bound
+		if img[s[0],s[1]] + delta > 1:
+
+			# if it will, calculate by how much
+			overshoot = img[s[0],s[1]] + delta - 1
+
+			# add the perturbation that will put it to 1 exactly
+			img[s[0],s[1]] += (delta - overshoot)
+
+			# reflect this change in the delta_map
+			delta_map[s[0],s[1]] += (delta - overshoot)
+
+			# add this location to the do_not_touch_locs list so we know not to touch this location again
+			do_not_touch_locs.append(s)
+
+			print "Added {} to do not touch!".format(s)
+
+		# If it will not cause an overshoot, add the perturbation as normal	
+		else:
+
+			delta_map[s[0],s[1]] += delta
+			img[s[0],s[1]] += delta 
 
 	# Calculate the new distance
 	dist = distance_fxn(sensitivity_map, delta_map)
@@ -242,11 +282,10 @@ while(cnt < MAX_ITERS):
 
 	if(pred == target_class):
 		print "*******************************\nSUCCESS"
-
+		print "Num Predictions: ",PREDICTION_COUNT
 		print "Max value in adv image: ",img.max()
 		print "Min value in adv image: ",img.min()
 		
-
 		plt.figure()
 		plt.subplot(1,2,1)
 		plt.title("Original Image")
@@ -262,7 +301,6 @@ while(cnt < MAX_ITERS):
 
 	cnt += 1
 
-
 plt.figure()
 plt.subplot(1,2,1)
 plt.title("Original Image")
@@ -273,7 +311,6 @@ plt.title("FAIL Adversarial Image")
 plt.axis('off')
 plt.imshow(img, cmap='gray')
 plt.show()
-
 
 exit()
 
