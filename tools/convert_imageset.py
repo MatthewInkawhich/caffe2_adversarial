@@ -41,7 +41,7 @@ def crop_center(img, new_height, new_width):
 def resize_image(img, new_height, new_width):
     h, w, _ = img.shape
     if (h < new_height or w < new_width):
-        img_data_r = imresize(img_data, (new_height, new_width))
+        img_data_r = imresize(img, (new_height, new_width))
     else:
         img_data_r = crop_center(img, new_height, new_width)
     return img_data_r
