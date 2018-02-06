@@ -156,83 +156,6 @@ def nate_VGG_d(model,data):
 
 	return softmax
 
-'''
-# http://vast.uccs.edu/~adhamija/blog/VGG_multiGPU.html
-# This is the D version as described in Table 1 of VGG paper (https://arxiv.org/pdf/1409.1556.pdf)
-def AddVGGModel_D(model,data):
-
-	#----- 3 x 224 x 224 --> 64 x 224 x 224 -----#
-	conv1_1 = brew.conv(model, data, 'conv1_1', 3, 64, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu1_1 = brew.relu(model, conv1_1, 'relu1_1')
-	#----- 64 x 224 x 224 --> 64 x 224 x 224 -----#
-	conv1_2 = brew.conv(model, relu1_1, 'conv1_2', 64, 64, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu1_2 = brew.relu(model, conv1_2, 'relu1_2')
-	#----- 64 x 224 x 224 --> 64 x 112 x 112 -----#
-	pool1 = brew.max_pool(model, relu1_2, 'pool1', kernel=2, stride=2)
-
-	#----- 64 x 112 x 112 --> 128 x 112 x 112 -----#
-	conv2_1 = brew.conv(model, pool1, 'conv2_1', 64, 128, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu2_1 = brew.relu(model, conv2_1, 'relu2_1')
-	#----- 128 x 112 x 112 --> 128 x 112 x 112 -----#
-	conv2_2 = brew.conv(model, relu2_1, 'conv2_2', 128, 128, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu2_2 = brew.relu(model, conv2_2, 'relu2_2')
-	#----- 128 x 112 x 112 --> 128 x 56 x 56 -----#
-	pool2 = brew.max_pool(model, relu2_2, 'pool2', kernel=2, stride=2)
-
-	#----- 128 x 56 x 56 --> 256 x 56 x 56 -----#
-	conv3_1 = brew.conv(model, pool2, 'conv3_1', 128, 256, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu3_1 = brew.relu(model, conv3_1, 'relu3_1')
-	#----- 256 x 56 x 56 --> 256 x 56 x 56 -----#
-	conv3_2 = brew.conv(model, relu3_1, 'conv3_2', 256, 256, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu3_2 = brew.relu(model, conv3_2, 'relu3_2')
-	#----- 256 x 56 x 56 --> 256 x 56 x 56 -----#
-	conv3_3 = brew.conv(model, relu3_2, 'conv3_3', 256, 256, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu3_3 = brew.relu(model, conv3_3, 'relu3_3')
-	#----- 256 x 56 x 56 --> 256 x 28 x 28 -----#
-	pool3 = brew.max_pool(model, relu3_3, 'pool3', kernel=2, stride=2)
-
-	#----- 256 x 28 x 28 --> 512 x 28 x 28 -----#
-	conv4_1 = brew.conv(model, pool3, 'conv4_1', 256, 512, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu4_1 = brew.relu(model, conv4_1, 'relu4_1')
-	#----- 512 x 28 x 28 --> 512 x 28 x 28 -----#
-	conv4_2 = brew.conv(model, relu4_1, 'conv4_2', 512, 512, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu4_2 = brew.relu(model, conv4_2, 'relu4_2')
-	#----- 512 x 28 x 28 --> 512 x 28 x 28 -----#
-	conv4_3 = brew.conv(model, relu4_2, 'conv4_3', 512, 512, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu4_3 = brew.relu(model, conv4_3, 'relu4_3')
-	#----- 512 x 28 x 28 --> 512 x 14 x 14 -----#
-	pool4 = brew.max_pool(model, relu4_3, 'pool4', kernel=2, stride=2)
-
-	#----- 512 x 14 x 14 --> 512 x 14 x 14 -----#
-	conv5_1 = brew.conv(model, pool4, 'conv5_1', 512, 512, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu5_1 = brew.relu(model, conv5_1, 'relu5_1')
-	#----- 512 x 14 x 14 --> 512 x 14 x 14 -----#
-	conv5_2 = brew.conv(model, relu5_1, 'conv5_2', 512, 512, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu5_2 = brew.relu(model, conv5_2, 'relu5_2')
-	#----- 512 x 14 x 14 --> 512 x 14 x 14 -----#
-	conv5_3 = brew.conv(model, relu5_2, 'conv5_3', 512, 512, 3,pad=1,weight_init=('GaussianFill',{'mean':0.0, 'std':1e-2}))
-	relu5_3 = brew.relu(model, conv5_3, 'relu5_3')
-	#----- 512 x 14 x 14 --> 512 x 7 x 7 -----#
-	pool5 = brew.max_pool(model, relu5_3, 'pool5', kernel=2, stride=2)
-
-	fc6 = brew.fc(model, pool5, 'fc6', 25088, 4096)
-	#        fc6 = brew.fc(model, pool5, 'fc6', 25088, 4096)
-	relu6 = brew.relu(model, fc6,'relu6')
-
-	drop6 = brew.dropout(model, relu6, 'drop6', ratio=0.5, is_test=0)
-
-	fc7 = brew.fc(model, drop6, 'fc7', 4096, 4096)
-	relu7 = brew.relu(model, fc7,'relu7')
-	drop7 = brew.dropout(model, relu7,'drop7',ratio=0.5,is_test=0)
-
-	fc8 = brew.fc(model, drop7, 'fc8', 4096, 11)
-	#no_of_ids)
-	softmax = brew.softmax(model, fc8, 'softmax')    
-	
-	return softmax
-'''
-
-
 # Add the model definition to the model
 softmax=nate_VGG_d(train_model, data)
 
@@ -304,7 +227,7 @@ pyplot.show()
 # init_net.pb defines the network params/weights
 print "Saving the trained model to predict/init.pb files"
 deploy_model = model_helper.ModelHelper(name="mnist_deploy", arg_scope=arg_scope, init_params=False)
-AddLeNetModel(deploy_model, "data")
+nate_VGG_d(deploy_model, "data")
 
 # Use the MOBILE EXPORTER to save the deploy model as pbs
 # https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
