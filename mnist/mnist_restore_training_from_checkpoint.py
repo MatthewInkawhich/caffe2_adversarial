@@ -6,10 +6,10 @@
 # import dependencies
 print "Import Dependencies..."
 from matplotlib import pyplot
-import numpy as np 
+import numpy as np
 import os
 import shutil
-import caffe2.python.predictor.predictor_exporter as pe 
+import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core,model_helper,net_drawer,optimizer,workspace,visualize,brew,utils
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
@@ -128,8 +128,3 @@ pyplot.legend(loc='upper right')
 pyplot.show()
 
 print "Done, exiting..."
-
-
-
-
-
