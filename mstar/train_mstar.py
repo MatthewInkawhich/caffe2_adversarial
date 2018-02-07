@@ -1,10 +1,8 @@
 # MatthewInkawhich
 # Use this script to train a simple MNIST net on the lmdbs of your choice and save the trained model
-# LINES TO MODIFY:
+# LINES TO MODIFY BEFORE RUNNING:
 #   - Must manually set Configs
-#   - Modify AddLeNetModel function if your images are:
-#       (a) not 1 color channel
-#       (b) not 28x28
+
 
 from __future__ import print_function
 from matplotlib import pyplot
@@ -34,6 +32,7 @@ validation_interval = 25            #validate every ... training iterations
 testing_images = 442               #total number of testing images
 image_width = 64
 image_height = 64
+image_channels = 1
 
 
 ########################################################################
@@ -72,19 +71,8 @@ def update_dims(height, width, kernel, stride, pad):
 
 # define model architecture in terms of layers
 def AddLeNetModel(model, data):
-    '''
-    This part is the standard LeNet model: from data to the softmax prediction.
-
-    For each convolutional layer we specify dim_in - number of input channels
-    and dim_out - number or output channels. Also each Conv and MaxPool layer changes the
-    image size. For example, kernel of size 5 reduces each side of an image by 4.
-
-    While when we have kernel and stride sizes equal 2 in a MaxPool layer, it divides
-    each side in half.
-    '''
-    ############# Change dim_in value if images are more than 1 color channel
     # Image size: 64x64
-    conv1 = brew.conv(model, data, 'conv1', dim_in=1, dim_out=32, kernel=5)
+    conv1 = brew.conv(model, data, 'conv1', dim_in=image_channels, dim_out=32, kernel=5)
     h,w = update_dims(height=image_height, width=image_width, kernel=5, stride=1, pad=0)
     # Image size: 60x60
     pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
