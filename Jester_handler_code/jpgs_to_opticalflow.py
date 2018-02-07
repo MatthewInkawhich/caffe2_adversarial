@@ -22,10 +22,10 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
     # https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
 
     # NATES CV2
-    flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    #flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 
     # MATTS CV2
-    #flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
+    flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
 
     h_oflow = flow[...,0]
     v_oflow = flow[...,1]
@@ -43,11 +43,11 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
         h_oflow[h_oflow > 40] = 40
         v_oflow[v_oflow < -40] = -40
         v_oflow[v_oflow > 40] = 40
-        
+
         h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
         v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
-        
-        
+
+
         '''
         #print "Method 1: recenter"
         # Recenter the data to 127
@@ -79,7 +79,7 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
 # ***************************************************************
 # MAIN
 
-dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
+dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
 jester_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1")
 oflow_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1-oflow")
 
@@ -93,17 +93,17 @@ for line in fin:
     # path = /.../datasets/jester/20bn-jester-v1/8769
     path = line.split()[0]
     print path
-    
+
     # get an array of jpgs in the directory (these are full paths)
     jpg_arr = glob.glob(path + "/*.jpg")
-    
+
     # make an array of just the file names in the jpg arr
     # names = ['00001.jpg', '00002.jpg', ...]
     names = [os.path.split(img)[-1] for img in jpg_arr]
     names.sort()
     #print names
-    
-    
+
+
     # Remove the odd indexes (downsample by 2)
     # This will calculate optical flow between 0,2 ; 2,4 ; 4,6 ; 6,8 ; ...
     cnt = 0
@@ -113,7 +113,7 @@ for line in fin:
             new_names.append(name)
         cnt+=1
     names=new_names
-    
+
 
     # create the oflow directory for this scene if it does not exist
     if os.path.exists(path.replace("20bn-jester-v1","20bn-jester-v1-oflow")) == False:
@@ -146,4 +146,3 @@ for line in fin:
 
         # Calculate the optical flow between the frames
         calc_optical_flow(in1, in2, 0, in3, in4)
-
