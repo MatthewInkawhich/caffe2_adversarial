@@ -79,7 +79,7 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
 # ***************************************************************
 # MAIN
 
-dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
+dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
 jester_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1")
 oflow_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1-oflow")
 
