@@ -34,6 +34,7 @@ validation_interval = 25            #validate every ... training iterations
 testing_images = 442               #total number of testing images
 image_width = 64
 image_height = 64
+checkpoint_iters = 50
 
 
 ########################################################################
@@ -166,6 +167,10 @@ def AddBookkeepingOperators(model):
     # gradients.
 
 
+def AddCheckpoints(model, checkpoint_iters, db_type):
+    ITER = brew.iter(train_model, "iter")
+    train_model.Checkpoint([ITER] + train_model.params, [], db="mstar_lenet_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
+
 
 ########################################################################
 # Define training, testing, and deployment models
@@ -180,7 +185,8 @@ data, label = AddInput(
     db_type='lmdb')
 softmax = AddLeNetModel(train_model, data)
 AddTrainingOperators(train_model, softmax, label)
-AddBookkeepingOperators(train_model)
+AddCheckpoints(train_model, checkpoint_iters, db_type="lmdb")
+#AddBookkeepingOperators(train_model)
 
 
 # Validation model
