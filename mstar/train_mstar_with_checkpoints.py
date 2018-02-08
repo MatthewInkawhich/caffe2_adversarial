@@ -172,6 +172,7 @@ def AddCheckpoints(model, checkpoint_iters, db_type):
     train_model.Checkpoint([ITER] + train_model.params, [], db="mstar_lenet_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
 
 
+
 ########################################################################
 # Define training, testing, and deployment models
 ########################################################################
@@ -258,6 +259,7 @@ for i in range(training_iters):
         workspace.RunNet(val_model.net.Proto().name)
         val_accuracy = workspace.FetchBlob('accuracy')
         print("Validation accuracy: ", str(val_accuracy))
+
 
 
 # After the execution is done, let's plot the values.

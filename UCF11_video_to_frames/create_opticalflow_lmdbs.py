@@ -95,6 +95,7 @@ def preprocess_and_create_lmdb(list_of_seqs, lmdb_name):
                 seq_for_lmdb = np.append(seq_for_lmdb, of_img, axis=0)
         #seq_for_lmdb now contains numpy "image" with seq_size*2 channels
 
+        
     ### Load sequence into LMDB
         with env.begin(write=True) as txn:
 

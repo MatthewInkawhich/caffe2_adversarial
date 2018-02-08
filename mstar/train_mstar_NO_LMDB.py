@@ -308,7 +308,7 @@ for i in range(training_iters):
     for image, label in train_dataset.read(batch_size=training_net_batch_size, shuffle=True):
         workspace.FeedBlob("data", image)
         workspace.FeedBlob("label", label)
-        break
+        #break
     workspace.RunNet(train_model.net)
     accuracy[i] = workspace.FetchBlob('accuracy')
     loss[i] = workspace.FetchBlob('loss')
@@ -318,7 +318,7 @@ for i in range(training_iters):
         for image, label in validation_dataset.read(batch_size=validation_images, shuffle=True):
             workspace.FeedBlob("data", image)
             workspace.FeedBlob("label", label)
-            break
+            #break
         workspace.RunNet(val_model.net.Proto().name)
         val_accuracy = workspace.FetchBlob('accuracy')
         print("Validation accuracy: ", str(val_accuracy))
@@ -356,7 +356,7 @@ workspace.CreateNet(test_model.net, overwrite=True)
 for image, label in test_dataset.read(batch_size=testing_images, shuffle=True):
     workspace.FeedBlob("data", image)
     workspace.FeedBlob("label", label)
-    break
+    #break
 workspace.RunNet(test_model.net.Proto().name)
 test_accuracy = workspace.FetchBlob('accuracy')
 # After the execution is done, let's print the mean accuracy value.
