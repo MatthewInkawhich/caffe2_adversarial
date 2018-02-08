@@ -1,7 +1,7 @@
 # NAI
 
-# The architecture here is the CNN-M-2048 that is described for the temporal
-#   stream in the original two-stream paper
+# This script allows us to resume training the stacked optical flow network that was
+# 	created with the CNNM_oflowstack_train_and_save.py
 
 # import dependencies
 print "Import Dependencies..."
@@ -22,13 +22,10 @@ import JesterDatasetHandler as jdh
 ##################################################################################
 # Gather Inputs
 train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/SMALL_TrainDictionary_5class.txt")
-predict_net_out = "CNNM_jester_predict_net.pb" # Note: these are in PWD
-init_net_out = "CNNM_2k_jester_init_net.pb"
-#training_iters = 2000
+INIT_NET = os.path.join(os.path.expanduser('~'),"DukeML/caffe2_sandbox/Temporal_Networks/CNNM_2k_jester_init_net.pb")
+init_net_out = "CNNM_Retrained_jester_init_net.pb"
+training_iters = 2000
 checkpoint_iters = 1000
-batch_size = 50
-num_epochs = 2
-
 
 ##################################################################################
 # MAIN
@@ -44,7 +41,7 @@ arg_scope = {"order":"NCHW"}
 
 # create the model object that will be used for the train net
 # This model object contains the network definition and the parameter storage
-train_model = model_helper.ModelHelper(name="CNNM_jester_train", arg_scope=arg_scope)
+train_model = model_helper.ModelHelper(name="CNNM_jester_train", init_params=False, arg_scope=arg_scope)
 
 ##################################################################################
 #### Add the model definition the the model object
@@ -122,6 +119,15 @@ def Add_CNN_M(model,data):
 # Add the model definition to the model
 softmax=Add_CNN_M(train_model, 'data')
 
+
+# Populate the model obj with the init net stuff, which provides the parameters for the model
+init_net_proto = caffe2_pb2.NetDef()
+with open(INIT_NET, "rb") as f:
+    init_net_proto.ParseFromString(f.read())
+tmp_param_net = core.Net(init_net_proto)
+#train_model.param_init_net = train_model.param_init_net.AppendNet(tmp_param_net)
+train_model.param_init_net = tmp_param_net
+
 ##################################################################################
 #### Step 3: Add training operators to the model
 
@@ -140,6 +146,7 @@ optimizer.build_sgd(train_model,base_learning_rate=0.1, policy="step", stepsize=
 #### Run the training procedure
 
 # Initialization.
+
 train_dataset = jdh.Jester_Dataset(dictionary_file=train_dictionary,seq_size=10)
 
 # Prime the workspace with some data so we can run init net once
@@ -159,15 +166,14 @@ total_iters = training_iters
 accuracy = []
 loss = []
 
+batch_size = 50
 # Manually run the network for the specified amount of iterations
-for epoch in range(num_epochs):
+for epoch in range(1):
 
 	for index, (image, label) in enumerate(train_dataset.read(batch_size)):
-
-		# image.shape = [bsize, 20, 100, 100]
 		workspace.FeedBlob("data", image)
 		workspace.FeedBlob("label", label)
-		workspace.RunNet(train_model.net) 
+		workspace.RunNet(train_model.net) # SEGFAULT HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		curr_acc = workspace.FetchBlob('accuracy')
 		curr_loss = workspace.FetchBlob('loss')
 		accuracy.append(curr_acc)
@@ -192,8 +198,6 @@ workspace.CreateNet(deploy_model.net, overwrite=True) # (?)
 init_net, predict_net = mobile_exporter.Export(workspace, deploy_model.net, deploy_model.params)
 with open(init_net_out, 'wb') as f:
     f.write(init_net.SerializeToString())
-with open(predict_net_out, 'wb') as f:
-    f.write(predict_net.SerializeToString())
 
 print "Done, saving..."
 
