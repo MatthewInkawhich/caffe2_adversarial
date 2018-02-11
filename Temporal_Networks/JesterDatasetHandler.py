@@ -35,7 +35,7 @@ def create_oflow_stack(seq):
 	# seq = [ \path\to\0_h.jpg, \path\to\0_v.jpg, \path\to\1_h.jpg, \path\to\1_v.jpg, ... ]
 
 	#print "in create oflow stack"
-	oflow_stack = np.zeros(shape=(20,100,100))
+	oflow_stack = np.zeros(shape=(len(seq),100,100))
 
 	# For each of the images in the sequence (which are contiguous optical flow images)
 	for i in range(len(seq)):

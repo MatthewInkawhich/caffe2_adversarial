@@ -21,10 +21,9 @@ import JesterDatasetHandler as jdh
 
 ##################################################################################
 # Gather Inputs
-train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/SMALL_TrainDictionary_5class.txt")
+train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
 predict_net_out = "CNNM_jester_predict_net.pb" # Note: these are in PWD
-init_net_out = "CNNM_2k_jester_init_net.pb"
-#training_iters = 2000
+init_net_out = "CNNM_2epoch_jester_init_net.pb"
 checkpoint_iters = 1000
 batch_size = 50
 num_epochs = 2
@@ -60,7 +59,7 @@ def Add_CNN_M(model,data):
 
 	##### CONV-1
 	conv1 = brew.conv(model, data, 'conv1', dim_in=20, dim_out=96, kernel=7, stride=2, pad=0)
-	#norm1 = brew.lrn(model, conv1, 'norm1', order="NCHW")
+	#norm1 = brew.lrn(model, conv1, 'norm1',order = "NCHW")
 	# Shape here = 96x47x47
 	pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
 	# Shape here = 96x23x23
@@ -134,7 +133,7 @@ loss = train_model.AveragedLoss(xent, 'loss')
 brew.accuracy(train_model, ['softmax', 'label'], 'accuracy')
 train_model.AddGradientOperators([loss])
 
-optimizer.build_sgd(train_model,base_learning_rate=0.1, policy="step", stepsize=1, gamma=0.999)
+optimizer.build_sgd(train_model,base_learning_rate=0.01, policy="step", stepsize=10000, gamma=0.1, momentum=0.9)
 
 ##################################################################################
 #### Run the training procedure
@@ -155,7 +154,6 @@ workspace.CreateNet(train_model.net, overwrite=True)
 
 
 # Set the total number of iterations and track the accuracy and loss
-total_iters = training_iters
 accuracy = []
 loss = []
 
