@@ -23,11 +23,11 @@ import os
 
 # ***************************************************************
 # Function to calculate dense optical flow between two adjacent frames
-def calc_optical_flow(img1, img2):
+def calc_optical_flow(frame1, frame2):
   
 	# Read in the images
-	frame1 = cv2.imread(img1)
-	frame2 = cv2.imread(img2)
+	#frame1 = cv2.imread(img1)
+	#frame2 = cv2.imread(img2)
 
 	# Convert the images to grayscale
 	f1_gray = cv2.cvtColor(frame1,cv2.COLOR_BGR2GRAY)
@@ -126,43 +126,101 @@ def perturbed_oflow_to_images(img1, img2, pert_oflow_h, pert_oflow_v, perturb_lo
 # MAIN
 
 # Inputs
-img1 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00012.jpg")
-img2 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00014.jpg")
+i1 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00012.jpg")
+i2 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00014.jpg")
+
+# Read the images into numpy arrays
+img1 = cv2.imread(i1)
+img2 = cv2.imread(i2)
 
 # Calculate Optical Flow
 h_oflow,v_oflow = calc_optical_flow(img1, img2)
 
-# Add N perturbations to optical flow field
+h_oflow -= 127
+v_oflow -= 127
 
+# Make copies of the optical flow to play with
+pof_h = np.copy(h_oflow)
+pof_v = np.copy(v_oflow)
+
+# Find the magnitudes of movement given the h and v oflows mag(x,y) = sqrt( (h_oflow^2) + (v_oflow^2) )
+magnitudes = np.sqrt((h_oflow)**2 + (v_oflow)**2)
+
+# Find the top N locations of magnitude
+N = 3
+indices = np.argpartition(magnitudes.flatten(), -N)[-N:]
+locs = np.vstack(np.unravel_index(indices, magnitudes.shape)).T
+
+print "Perturbing at: ",locs
+
+# Apply the N perturbations to optical flow field
+for loc in locs:
+	row = loc[0]
+	col = loc[1]
+	pof_h[row,col] *= -1
+	pof_v[row,col] *= -1
 
 # Reverse the optical flow perturbations onto two adversarial spatial images
-
+pimg1,pimg2 = perturbed_oflow_to_images(img1,img2,pof_h,pof_v,locs)
 
 # Recalculate optical flow on adversarial spatial images
+p_h_oflow,p_v_oflow = calc_optical_flow(pimg1, pimg2)
 
+##################################################################################
+# Plotting results
 
 # Plot Results 2x5 grid
 # [1] - Plot original 1st frame
-plt.subplot(2,5,1)
-plt.imshow(cv2.imread(img1))
-# [2] - Plot original 2nd frame
-plt.subplot(2,5,2)
-plt.imshow(cv2.imread(img2))
-# [3] - Plot original horizontal optical flow
-plt.subplot(2,5,3)
-plt.imshow(h_oflow)
-# [4] - Plot original vertical optical flow
-plt.subplot(2,5,4)
-plt.imshow(v_oflow)
-# [5] - Plot Vector Field of original optical flow
+plt.subplot(3,4,1)
+plt.imshow(img1)
 
-# [6] - Plot Manually perturbed optical flow
-# [7] - Plot Vector Field of manually perturbed oflow
-# [8] - Plot Adversarial 1st frame
-# [9] - Plot Adversarial 2nd frame
-# [10] - Plot oflow between adversarial frames
-# [11] - Plot oflow between adversarial frames
-# [12] - Plot vector flow of adversarial oflow
+# [2] - Plot original 2nd frame
+plt.subplot(3,4,2)
+plt.imshow(img2)
+
+# [3] - Plot original horizontal optical flow
+plt.subplot(3,4,3)
+plt.imshow(h_oflow)
+
+# [4] - Plot original vertical optical flow
+plt.subplot(3,4,4)
+plt.imshow(v_oflow)
+
+# [5] - Plot Vector Field of original optical flow (!!!!!!!!)
+plt.subplot(3,4,5)
+plt.imshow(magnitudes)
+
+# [6] - Plot Manually perturbed horizontal optical flow
+plt.subplot(3,4,6)
+plt.imshow(pof_h)
+
+# [7] - Plot Manually perturbed vertical optical flow
+plt.subplot(3,4,7)
+plt.imshow(pof_v)
+
+# [8] - Plot Vector Field of manually perturbed oflow (!!!!!!!!)
+plt.subplot(3,4,8)
+plt.imshow(magnitudes)
+
+# [9] - Plot Adversarial 1st frame
+plt.subplot(3,4,9)
+plt.imshow(pimg1)
+
+# [10] - Plot Adversarial 2nd frame
+plt.subplot(3,4,10)
+plt.imshow(pimg2)
+
+# [11] - Plot h oflow between adversarial frames
+plt.subplot(3,4,11)
+plt.imshow(p_h_oflow)
+
+# [12] - Plot v oflow between adversarial frames
+plt.subplot(3,4,12)
+plt.imshow(p_v_oflow)
+
+# [13] - Plot vector flow of adversarial oflow (!!!!!!!!)
+#plt.subplot(3,4,13)
+#plt.imshow(magnitudes)
 
 plt.show()
 
