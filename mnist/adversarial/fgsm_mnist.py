@@ -140,7 +140,9 @@ for _ in range(num_images):
     #print('\nsoftmax: ', softmax[0])
     #print('\nlabel: ', label[0])
     data_grad = workspace.FetchBlob('data_grad')
-    #print("data_grad.shape", data_grad.shape)
+    print("data_grad.shape", data_grad.shape)
+    print("data_grad", data_grad)
+    exit()
     h, w = I.shape
     #print('h:', h, 'w:', w)
 
