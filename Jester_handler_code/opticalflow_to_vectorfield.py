@@ -69,7 +69,18 @@ def calc_optical_flow(im1, im2):
     return h_oflow, v_oflow, f1_gray, f2_gray
 
 
-def print_vector_field(h_oflow, v_oflow, downsample=1):
+def print_vector_field(X, Y, U, V, title, downsample=1):
+    # Plot optical flow flow field
+    plt.figure()
+    plt.title(title)
+    plt.quiver(X, Y, U, V, scale=1, units='xy')
+    plt.xlim(-1, image_width)
+    plt.ylim(-1, image_height)
+    plt.gca().invert_yaxis()
+    plt.show()
+
+
+def get_optical_flow_vector_field(h_oflow, v_oflow):
     # X: x-coordinates of the arrow tails
     # Y: y-coordinates of the arrow tails
     # U: x components of arrow vectors
@@ -89,15 +100,7 @@ def print_vector_field(h_oflow, v_oflow, downsample=1):
                 if i%downsample==0 and j%downsample==0:
                     U[i,j] = h_oflow[i,j]
                     V[i,j] = v_oflow[i,j]
-
-    # Plot optical flow flow field
-    plt.figure()
-    plt.title("Optical Flow Vector Field")
-    plt.quiver(X, Y, U, V, scale=1, units='xy')
-    plt.xlim(-1, image_width)
-    plt.ylim(-1, image_height)
-    plt.gca().invert_yaxis()
-    plt.show()
+    return X, Y, U, V
 
 
 def print_all_optical_flow(h_oflow, v_oflow, f1, f2, downsample=1):
@@ -111,7 +114,8 @@ def print_all_optical_flow(h_oflow, v_oflow, f1, f2, downsample=1):
     axarr[1,1].set_title("vertical flow")
     axarr[1,1].imshow(v_oflow, cmap='gray')
     plt.tight_layout()
-    print_vector_field(h_oflow, v_oflow, downsample)
+    X, Y, U, V = get_optical_flow_vector_field(h_oflow, v_oflow)
+    print_vector_field(X, Y, U, V, "Optical Flow Vector Field", downsample)
 
 
 def preprocess_optical_flow_jpg(h_path, v_path):
@@ -133,27 +137,28 @@ def preprocess_optical_flow_jpg(h_path, v_path):
 ### (1) Print optical flow from two sequential spatial images
 
 # Paths to spatial jpg frames
-im1 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '13377', '00010.jpg')
-im2 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '13377', '00012.jpg')
+# im1 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '13377', '00010.jpg')
+# im2 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '13377', '00012.jpg')
 
 # Calculate optical flow
-h, v, f1_gray, f2_gray = calc_optical_flow(im1, im2)
+#h, v, f1_gray, f2_gray = calc_optical_flow(im1, im2)
 
-# Print optical flow
-print_all_optical_flow(h, v, f1_gray, f2_gray, downsample)
+# Print all optical flow stuff
+#print_all_optical_flow(h, v, f1_gray, f2_gray, downsample)
 
 # (or print just vector field)
-#print_vector_field(h, v, downsample)
+X, Y, U, V = get_optical_flow_vector_field(h, v)
+print_vector_field(X, Y, U, V, "Plot title", downsample)
 
 
 
 # ### (2) Print vector field from optical flow jpgs (h and v)
-#
-# # Paths to optical flow frames
+
+# Paths to optical flow frames
 # h_path = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1-oflow', '13377', 'oflow_00010_00012_4_h.jpg')
 # v_path = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1-oflow', '13377', 'oflow_00010_00012_4_v.jpg')
 #
 # # Preprocess optical flow from jpgs
 # h, v = preprocess_optical_flow_jpg(h_path, v_path)
-#
-# print_vector_field(h, v, downsample)
+# X, Y, U, V = get_optical_flow_vector_field(h, v)
+# print_vector_field(X, Y, U, V, "Plot title", downsample)
