@@ -5,17 +5,32 @@
 import os
 import glob
 import cv2
+import numpy as np
+np.set_printoptions(threshold=np.nan)
+import matplotlib.pyplot as plt
+
 
 # ***************************************************************
 # Function to calculate dense optical flow between two adjacent frames
+def crop_center(img, new_height, new_width):
+    orig_height, orig_width, _ = img.shape
+    startx = (orig_width//2) - (new_width//2)
+    starty = (orig_height//2) - (new_height//2)
+    return img[starty:starty+new_height, startx:startx+new_width]
+
+
 def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vertical):
     # global count
     # count += 1
-    frame1 = cv2.imread(img1)
-    frame2 = cv2.imread(img2)
+    image_height = 100
+    image_width = 100
 
+
+    frame1 = crop_center(cv2.imread(img1), image_height, image_width)
+    frame2 = crop_center(cv2.imread(img2), image_height, image_width)
     f1_gray = cv2.cvtColor(frame1,cv2.COLOR_BGR2GRAY)
     f2_gray = cv2.cvtColor(frame2,cv2.COLOR_BGR2GRAY)
+
 
     # calculate dense optical flow
     # settings from tutorial
@@ -35,28 +50,24 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
     print "\tmin: ",h_oflow.min()
     print "\tmean: ",h_oflow.mean()
 
-    if method == 0:
-
-
+    #if method == 0:
         # From beyond short snippits
-        h_oflow[h_oflow < -40] = -40
-        h_oflow[h_oflow > 40] = 40
-        v_oflow[v_oflow < -40] = -40
-        v_oflow[v_oflow > 40] = 40
+        # h_oflow[h_oflow < -40] = -40
+        # h_oflow[h_oflow > 40] = 40
+        # v_oflow[v_oflow < -40] = -40
+        # v_oflow[v_oflow > 40] = 40
+        #
+        # h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
+        # v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
 
-        h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
-        v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
-
-
-        '''
-        #print "Method 1: recenter"
-        # Recenter the data to 127
-        h_oflow += 127
-        v_oflow += 127
-
-        h_oflow[h_oflow < 0] = 0
-        v_oflow[v_oflow > 255] = 255
-        '''
+    h_oflow += 127
+    v_oflow += 127
+    h_oflow[h_oflow < 0] = 0
+    h_oflow[h_oflow > 255] = 255
+    v_oflow[v_oflow < 0] = 0
+    v_oflow[v_oflow > 255] = 255
+    h_oflow = np.rint(h_oflow)
+    v_oflow = np.rint(v_oflow)
 
     # if method == 1:
     # 	#print "Method 2: normalize"
@@ -76,10 +87,13 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
     cv2.imwrite(ofile_name_vertical, v_oflow)
 
 
+
+
+
 # ***************************************************************
 # MAIN
 
-dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
+dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
 jester_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1")
 oflow_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1-oflow")
 
