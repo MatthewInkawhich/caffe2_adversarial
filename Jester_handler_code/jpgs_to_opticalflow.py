@@ -8,16 +8,12 @@ import cv2
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 import matplotlib.pyplot as plt
+import sys
+sys.path.append(os.path.join(os.path.expanduser('~'), 'DukeML', 'caffe2_sandbox', 'lib'))
+import image_manipulation
 
 
 # ***************************************************************
-# Function to calculate dense optical flow between two adjacent frames
-def crop_center(img, new_height, new_width):
-    orig_height, orig_width, _ = img.shape
-    startx = (orig_width//2) - (new_width//2)
-    starty = (orig_height//2) - (new_height//2)
-    return img[starty:starty+new_height, startx:startx+new_width]
-
 
 def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vertical):
     # global count
@@ -26,8 +22,8 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
     image_width = 100
 
 
-    frame1 = crop_center(cv2.imread(img1), image_height, image_width)
-    frame2 = crop_center(cv2.imread(img2), image_height, image_width)
+    frame1 = image_manipulation.crop_center(cv2.imread(img1), image_height, image_width)
+    frame2 = image_manipulation.crop_center(cv2.imread(img2), image_height, image_width)
     f1_gray = cv2.cvtColor(frame1,cv2.COLOR_BGR2GRAY)
     f2_gray = cv2.cvtColor(frame2,cv2.COLOR_BGR2GRAY)
 
