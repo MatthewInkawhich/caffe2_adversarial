@@ -22,7 +22,7 @@ def calc_optical_flow(im1, im2, image_height, image_width):
         flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
     else:
         # MATTS CV2
-        flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
+        flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 30, 3, 5, 1.2, 0)
 
     h_oflow = flow[...,0]
     v_oflow = flow[...,1]
@@ -82,7 +82,7 @@ def print_vector_field(X, Y, U, V, title, downsample=1):
                 V[i,j] = 0
     plt.figure()
     plt.title(title)
-    plt.quiver(X, Y, U, V, scale=1, units='xy')
+    plt.quiver(X, Y, U, -V, scale=1, units='xy')
     plt.xlim(-1, col)
     plt.ylim(-1, row)
     plt.gca().invert_yaxis()
@@ -104,7 +104,7 @@ def print_vector_field_with_diff(X, Y, U, V, title, diff=[], downsample=1):
         C[r,c] = 1
     plt.figure()
     plt.title(title)
-    plt.quiver(X, Y, U, V, C, scale=1, units='xy', cmap='bwr')
+    plt.quiver(X, Y, U, -V, C, scale=1, units='xy', cmap='bwr')
     plt.xlim(-1, col)
     plt.ylim(-1, row)
     plt.gca().invert_yaxis()
