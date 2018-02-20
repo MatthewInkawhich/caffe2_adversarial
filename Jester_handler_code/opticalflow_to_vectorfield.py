@@ -59,14 +59,14 @@ i1 = i1[:, :, (2, 1, 0)]
 i2 = cv2.imread(im2_p)
 i2 = i2[:, :, (2, 1, 0)]
 
-n=10
-for r in range(83,83+n):
-    for c in range(15,15+n):
-        i1[r,c] = (0,255,0)
-
-for r in range(83,83+n):
-    for c in range(0,0+n):
-        i2[r,c] = (0,255,0)
+# n=10
+# for r in range(83,83+n):
+#     for c in range(15,15+n):
+#         i1[r,c] = (0,255,0)
+#
+# for r in range(83,83+n):
+#     for c in range(0,0+n):
+#         i2[r,c] = (0,255,0)
 
 
 # cv2.imwrite(im1_p, i1)

@@ -87,7 +87,7 @@ def AddLeNetModel(model, data, num_classes, image_height, image_width, image_cha
     h,w = update_dims(height=h, width=w, kernel=2, stride=2, pad=0)
     # 50 * 4 * 4 stands for dim_out from previous layer multiplied by the image size
     ############# Change dim_in value if images are not 28x28
-    fc3 = brew.fc(model, pool2, 'fc3', dim_in=50 * h * h, dim_out=500)
+    fc3 = brew.fc(model, pool2, 'fc3', dim_in=50 * h * w, dim_out=500)
     fc3 = brew.relu(model, fc3, fc3)
     pred = brew.fc(model, fc3, 'pred', 500, num_classes)
     softmax = brew.softmax(model, pred, 'softmax')

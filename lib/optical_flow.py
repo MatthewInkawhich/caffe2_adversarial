@@ -12,9 +12,9 @@ def calc_optical_flow(im1, im2, image_height, image_width):
     # settings from tutorial
     # https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
     cv2_version = int(cv2.__version__.split('.')[0])
-    frame1 = image_manipulation.crop_center(cv2.imread(im1), image_height, image_width)
+    frame1 = image_manipulation.resize_image(cv2.imread(im1), image_height, image_width)
     f1_gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
-    frame2 = image_manipulation.crop_center(cv2.imread(im2), image_height, image_width)
+    frame2 = image_manipulation.resize_image(cv2.imread(im2), image_height, image_width)
     f2_gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
     if cv2_version > 2:
@@ -47,6 +47,61 @@ def calc_optical_flow(im1, im2, image_height, image_width):
     return h_oflow, v_oflow
 
 
+
+def write_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical):
+    cv2_version = int(cv2.__version__.split('.')[0])
+    image_height = 100
+    image_width = 100
+
+    frame1 = image_manipulation.crop_center(cv2.imread(img1), image_height, image_width)
+    frame2 = image_manipulation.crop_center(cv2.imread(img2), image_height, image_width)
+    f1_gray = cv2.cvtColor(frame1,cv2.COLOR_BGR2GRAY)
+    f2_gray = cv2.cvtColor(frame2,cv2.COLOR_BGR2GRAY)
+
+    # calculate dense optical flow
+    # settings from tutorial
+    # https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
+
+    if cv2_version > 2:
+        # NATES CV2
+        flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    else:
+        # MATTS CV2
+        flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 30, 3, 5, 1.2, 0)
+
+    h_oflow = flow[...,0]
+    v_oflow = flow[...,1]
+
+    print "\tBefore adjustment..."
+    print "\tmax: ",h_oflow.max()
+    print "\tmin: ",h_oflow.min()
+    print "\tmean: ",h_oflow.mean()
+
+
+    # Normalize
+    # Multiply by 10, recenter to 127, cap at [0,255], round to int
+    h_oflow *= 10
+    v_oflow *= 10
+    h_oflow += 127
+    v_oflow += 127
+    h_oflow[h_oflow > 255] = 255
+    h_oflow[h_oflow < 0] = 0
+    v_oflow[v_oflow > 255] = 255
+    v_oflow[v_oflow < 0] = 0
+    h_oflow = np.rint(h_oflow)
+    v_oflow = np.rint(v_oflow)
+
+    print "\tAfter adjustment..."
+    print "\tmax: ",h_oflow.max()
+    print "\tmin: ",h_oflow.min()
+    print "\tmean: ",h_oflow.mean()
+
+    # Save the optical flow displacement fields as images
+    cv2.imwrite(ofile_name_horizontal, h_oflow)
+    cv2.imwrite(ofile_name_vertical, v_oflow)
+
+
+
 # Returns optical flow vector field as 4 matrices to be fed into the
 #   print_vector_field functions
 def get_optical_flow_vector_field(h_oflow, v_oflow):
@@ -71,6 +126,7 @@ def get_optical_flow_vector_field(h_oflow, v_oflow):
     return X, Y, U, V
 
 
+
 # Print vector field data from get_optical_flow_vector_field function
 def print_vector_field(X, Y, U, V, title, downsample=1):
     # Plot optical flow flow field
@@ -87,6 +143,7 @@ def print_vector_field(X, Y, U, V, title, downsample=1):
     plt.ylim(-1, row)
     plt.gca().invert_yaxis()
     plt.show()
+
 
 
 # Print vector field data from get_optical_flow_vector_field function, but also
@@ -109,6 +166,7 @@ def print_vector_field_with_diff(X, Y, U, V, title, diff=[], downsample=1):
     plt.ylim(-1, row)
     plt.gca().invert_yaxis()
     plt.show()
+
 
 
 # Takes horizontal and vertical oflow jpgs and recenters data back to zero
