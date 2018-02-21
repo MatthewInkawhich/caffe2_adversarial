@@ -26,9 +26,13 @@ import JesterDatasetHandler as jdh
 
 ##################################################################################
 # Gather Inputs
-test_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
+test_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/SmallTestDictionary_5class.txt")
 predict_net = "CNNM_jester_predict_net.pb"
-init_net = "CNNM_4epoch_jester_init_net.pb"
+init_net = "CNNM_2epoch_jester_init_net.pb"
+
+
+device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
+
 
 
 ##################################################################################
@@ -78,6 +82,7 @@ print "Total Tests = {}".format(total)
 print "# Correct = {}".format(num_correct)
 print "Accuracy = {}".format(num_correct/float(total))
 
+'''
 # Plot confusion matrix
 fig = plt.figure()
 #plt.clf()
@@ -100,5 +105,5 @@ ax.set_xlabel('Predicted Class')
 ax.set_ylabel('True Class')
 plt.title('Jester 5-class Confusion Matrix')
 plt.show()
-
+'''
 
