@@ -15,6 +15,12 @@
 # 
 ##################################################################################
 
+# Warping images with optical flow
+#https://stackoverflow.com/questions/44535091/convection-of-an-image-using-optical-flow
+#https://www.mathworks.com/matlabcentral/answers/23708-using-optical-flow-to-warp-an-image
+#http://pytorch.org/docs/master/_modules/torch/nn/functional.html#grid_sample
+#https://stackoverflow.com/questions/17459584/opencv-warping-image-based-on-calcopticalflowfarneback
+
 import numpy as np
 import random
 import matplotlib.pyplot as plt 
@@ -24,10 +30,15 @@ import os
 # ***************************************************************
 # Function to calculate dense optical flow between two adjacent frames
 def calc_optical_flow(frame1, frame2):
-  
+
 	# Read in the images
 	#frame1 = cv2.imread(img1)
 	#frame2 = cv2.imread(img2)
+
+	print frame1.shape
+	print frame1.max()
+	print frame1.min()
+	exit()
 
 	# Convert the images to grayscale
 	f1_gray = cv2.cvtColor(frame1,cv2.COLOR_BGR2GRAY)
@@ -44,19 +55,14 @@ def calc_optical_flow(frame1, frame2):
 	h_oflow = flow[...,0]
 	v_oflow = flow[...,1]
 
-	# Recenter to 127
-	h_oflow += 127
-	v_oflow += 127
+	# From beyond short snippits
+	h_oflow[h_oflow < -40] = -40
+	h_oflow[h_oflow > 40] = 40
+	v_oflow[v_oflow < -40] = -40
+	v_oflow[v_oflow > 40] = 40
 
-	# Clip at the bounds [0,255]
-	h_oflow[h_oflow < 0] = 0
-	h_oflow[h_oflow > 255] = 255
-	v_oflow[v_oflow < 0] = 0
-	v_oflow[v_oflow > 255] = 255
-
-	# Cast to integers
-	h_oflow = np.rint(h_oflow)
-	v_oflow = np.rint(v_oflow)
+	h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
+	v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
 
 	# Return the oflow
 	return h_oflow,v_oflow
@@ -77,9 +83,14 @@ def calc_optical_flow(frame1, frame2):
 #
 def perturbed_oflow_to_images(img1, img2, pert_oflow_h, pert_oflow_v, perturb_locs):
 
+	#print img1.shape
+	#print img1.max()
+	#print img1.min()
+	#exit()
+
 	# Size of cluster that will be placed on image
 	# For now, this is a square with sides of length K
-	K = 2
+	K = 10
 
 	# Make copy of img1 and img2, which will be perturbed and returned
 	adv1 = np.copy(img1)
@@ -115,19 +126,49 @@ def perturbed_oflow_to_images(img1, img2, pert_oflow_h, pert_oflow_v, perturb_lo
 		# Place cluster of K pixels with color C onto img2 at loc( row + oflow_v(row,col), col + oflow_h(row,col) )
 		for i in range(K):
 			for j in range(K):
+            
 				adv2[int(row2+i),int(col2+j)] = img1[row,col]
 
 	# Return adversarial images
 	return adv1,adv2
 
+def print_vector_field(h_oflow, v_oflow, title,downsample=1):
+    # X: x-coordinates of the arrow tails
+    # Y: y-coordinates of the arrow tails
+    # U: x components of arrow vectors
+    # V: y components of arrow vectors
+    image_height, image_width = h_oflow.shape
+
+    # Create meshgrid for coordinate resemblance
+    Y, X = np.mgrid[0:image_height, 0:image_width]
+
+    # Initialize U and V as the same size as image
+    U = np.zeros((image_height,image_width))
+    V = np.zeros((image_height,image_width))
+
+    # Fill U and V with x and y vector components from h_img and v_img
+    for i in range(image_height):
+            for j in range (image_width):
+                if i%downsample==0 and j%downsample==0:
+                    U[i,j] = h_oflow[i,j]
+                    V[i,j] = v_oflow[i,j]
+
+    # Plot optical flow flow field
+    plt.figure()
+    plt.title(title)
+    plt.quiver(X, Y, U, V, scale=1, units='xy')
+    plt.xlim(-1, image_width)
+    plt.ylim(-1, image_height)
+    plt.gca().invert_yaxis()
+    plt.show(block=False)
 
 
 ##################################################################################
 # MAIN
 
 # Inputs
-i1 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00012.jpg")
-i2 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00014.jpg")
+i1 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00014.jpg")
+i2 = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1/9/00015.jpg")
 
 # Read the images into numpy arrays
 img1 = cv2.imread(i1)
@@ -136,8 +177,6 @@ img2 = cv2.imread(i2)
 # Calculate Optical Flow
 h_oflow,v_oflow = calc_optical_flow(img1, img2)
 
-h_oflow -= 127
-v_oflow -= 127
 
 # Make copies of the optical flow to play with
 pof_h = np.copy(h_oflow)
@@ -147,7 +186,7 @@ pof_v = np.copy(v_oflow)
 magnitudes = np.sqrt((h_oflow)**2 + (v_oflow)**2)
 
 # Find the top N locations of magnitude
-N = 3
+N = 20
 indices = np.argpartition(magnitudes.flatten(), -N)[-N:]
 locs = np.vstack(np.unravel_index(indices, magnitudes.shape)).T
 
@@ -166,66 +205,80 @@ pimg1,pimg2 = perturbed_oflow_to_images(img1,img2,pof_h,pof_v,locs)
 # Recalculate optical flow on adversarial spatial images
 p_h_oflow,p_v_oflow = calc_optical_flow(pimg1, pimg2)
 
+
 ##################################################################################
 # Plotting results
 
+f, axarr = plt.subplots(2,5,figsize=(10,10))
+
 # Plot Results 2x5 grid
 # [1] - Plot original 1st frame
-plt.subplot(3,4,1)
-plt.imshow(img1)
+axarr[0,0].set_title("Orig Frame 1")
+axarr[0,0].imshow(img1)
+axarr[0,0].axis("off")
+#axarr[0,0].tight_layout()
 
 # [2] - Plot original 2nd frame
-plt.subplot(3,4,2)
-plt.imshow(img2)
+axarr[0,1].set_title("Orig Frame 2")
+axarr[0,1].imshow(img2)
+axarr[0,1].axis("off")
+#axarr[0,1].tight_layout()
 
 # [3] - Plot original horizontal optical flow
-plt.subplot(3,4,3)
-plt.imshow(h_oflow)
+axarr[0,2].set_title("Orig H Oflow")
+axarr[0,2].imshow(h_oflow,cmap='gray')
+axarr[0,2].axis("off")
+#axarr[0,2].tight_layout()
 
 # [4] - Plot original vertical optical flow
-plt.subplot(3,4,4)
-plt.imshow(v_oflow)
+axarr[0,3].set_title("Orig V Oflow")
+axarr[0,3].imshow(v_oflow,cmap='gray')
+axarr[0,3].axis("off")
+#axarr[0,3].tight_layout()
 
-# [5] - Plot Vector Field of original optical flow (!!!!!!!!)
-plt.subplot(3,4,5)
-plt.imshow(magnitudes)
+# [5] - Plot Manually perturbed horizontal optical flow
+axarr[0,4].set_title("Manually Pert H Oflow")
+axarr[0,4].imshow(pof_h)
+axarr[0,4].axis("off")
+#axarr[0,4].tight_layout()
 
-# [6] - Plot Manually perturbed horizontal optical flow
-plt.subplot(3,4,6)
-plt.imshow(pof_h)
+# [6] - Plot Manually perturbed vertical optical flow
+axarr[1,0].set_title("Manually Pert V Oflow")
+axarr[1,0].imshow(pof_v)
+axarr[1,0].axis("off")
+#axarr[1,0].tight_layout()
 
-# [7] - Plot Manually perturbed vertical optical flow
-plt.subplot(3,4,7)
-plt.imshow(pof_v)
+# [7] - Plot Adversarial 1st frame
+axarr[1,1].set_title("Adversarial Frame 1")
+axarr[1,1].imshow(pimg1)
+axarr[1,1].axis("off")
+#axarr[1,1].tight_layout()
 
-# [8] - Plot Vector Field of manually perturbed oflow (!!!!!!!!)
-plt.subplot(3,4,8)
-plt.imshow(magnitudes)
+# [8] - Plot Adversarial 2nd frame
+axarr[1,2].set_title("Adversarial Frame 2")
+axarr[1,2].imshow(pimg2)
+axarr[1,2].axis("off")
+#axarr[1,2].tight_layout()
 
-# [9] - Plot Adversarial 1st frame
-plt.subplot(3,4,9)
-plt.imshow(pimg1)
+# [9] - Plot h oflow between adversarial frames
+axarr[1,3].set_title("Calculated Pert H Oflow")
+axarr[1,3].imshow(p_h_oflow)
+axarr[1,3].axis("off")
+#axarr[1,3].tight_layout()
 
-# [10] - Plot Adversarial 2nd frame
-plt.subplot(3,4,10)
-plt.imshow(pimg2)
+# [10] - Plot v oflow between adversarial frames
+axarr[1,4].set_title("Calculated Pert V Oflow")
+axarr[1,4].imshow(p_v_oflow)
+axarr[1,4].axis("off")
+#axarr[1,4].tight_layout()
 
-# [11] - Plot h oflow between adversarial frames
-plt.subplot(3,4,11)
-plt.imshow(p_h_oflow)
+# Create oflow vector field
+print_vector_field(h_oflow, v_oflow, "Original OFlow Vector Field", downsample=6)
 
-# [12] - Plot v oflow between adversarial frames
-plt.subplot(3,4,12)
-plt.imshow(p_v_oflow)
-
-# [13] - Plot vector flow of adversarial oflow (!!!!!!!!)
-#plt.subplot(3,4,13)
-#plt.imshow(magnitudes)
+# Create oflow vector field
+print_vector_field(p_h_oflow, p_v_oflow, "Perturbed OFlow Vector Field", downsample=6)
 
 plt.show()
-
-
-
 
 '''
 ##################################################################################

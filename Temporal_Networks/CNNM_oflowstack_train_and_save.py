@@ -22,8 +22,9 @@ import JesterDatasetHandler as jdh
 ##################################################################################
 # Gather Inputs
 train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
-predict_net_out = "CNNM_jester_predict_net.pb" # Note: these are in PWD
-init_net_out = "CNNM_2epoch_jester_init_net.pb"
+#train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/VerySmallTestDictionary_5class.txt")
+predict_net_out = "new_CNNM_jester_predict_net.pb" # Note: these are in PWD
+init_net_out = "new_CNNM_2epoch_jester_init_net.pb"
 checkpoint_iters = 1000
 batch_size = 50
 num_epochs = 2
@@ -125,7 +126,7 @@ softmax=Add_CNN_M(train_model, 'data')
 #### Step 3: Add training operators to the model
 
 ITER = brew.iter(train_model, "iter")
-train_model.Checkpoint([ITER] + train_model.params, [], db="cnnm_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
+train_model.Checkpoint([ITER] + train_model.params, [], db="new_cnnm_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
 
 
 xent = train_model.LabelCrossEntropy(['softmax', 'label'], 'xent')
@@ -143,9 +144,9 @@ train_dataset = jdh.Jester_Dataset(dictionary_file=train_dictionary,seq_size=10)
 
 # Prime the workspace with some data so we can run init net once
 for image, label in train_dataset.read(batch_size=1):
-    workspace.FeedBlob("data", image)
-    workspace.FeedBlob("label", label)
-    break
+	workspace.FeedBlob("data", image)
+	workspace.FeedBlob("label", label)
+	break
 
 # run the param init network once
 workspace.RunNetOnce(train_model.param_init_net)
@@ -165,7 +166,14 @@ for epoch in range(num_epochs):
 		# image.shape = [bsize, 20, 100, 100]
 		workspace.FeedBlob("data", image)
 		workspace.FeedBlob("label", label)
-		workspace.RunNet(train_model.net) 
+		workspace.RunNet(train_model.net)
+
+		# Look at data grad stuff
+		#dg = workspace.FetchBlob('data_grad')
+		#pyplot.imshow(dg[0,1,:,:],cmap='gray')
+		#pyplot.show()
+		#exit()
+
 		curr_acc = workspace.FetchBlob('accuracy')
 		curr_loss = workspace.FetchBlob('loss')
 		accuracy.append(curr_acc)
