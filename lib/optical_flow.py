@@ -48,10 +48,8 @@ def calc_optical_flow(im1, im2, image_height, image_width):
 
 
 
-def write_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical):
+def write_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical, image_height, image_width):
     cv2_version = int(cv2.__version__.split('.')[0])
-    image_height = 100
-    image_width = 100
 
     frame1 = image_manipulation.crop_center(cv2.imread(img1), image_height, image_width)
     frame2 = image_manipulation.crop_center(cv2.imread(img2), image_height, image_width)
