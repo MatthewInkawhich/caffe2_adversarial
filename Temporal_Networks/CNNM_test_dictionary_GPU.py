@@ -6,6 +6,9 @@
 #   quickly see how the model we just trained does on our test set. Note, the test
 #   dictionary is labeled, so this will output a % ACCURACY
 #
+# This script supports GPU testing because it does not use the predictor, rather
+#   it brings up a net and manually feeds blobs into the workspace.
+#
 ##################################################################################
 
 # import dependencies
@@ -27,18 +30,36 @@ import JesterDatasetHandler as jdh
 ##################################################################################
 # Gather Inputs
 test_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/VerySmallTestDictionary_5class.txt")
-predict_net = "CNNM_jester_predict_net.pb"
-init_net = "CNNM_4epoch_jester_init_net.pb"
+PREDICT_NET = "CNNM_jester_predict_net.pb"
+INIT_NET = "CNNM_4epoch_jester_init_net.pb"
+
+gpu_no = 0
+device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
 
 
 ##################################################################################
-# Bring up the network from the .pb files
-with open(init_net) as f:
-    init_net = f.read()
-with open(predict_net) as f:
-    predict_net = f.read()
+# Bring in trained model
 
-p = workspace.Predictor(init_net, predict_net)
+# specify that input data is stored in NCHW storage order
+arg_scope = {"order":"NCHW", "gpu_id": gpu_no, "use_cudnn": True}
+#arg_scope = {"order":"NCHW"}
+test_model = model_helper.ModelHelper(name="CNNM_jester_test", arg_scope=arg_scope)
+test_model.param_init_net.RunAllOnGPU()
+test_model.net.RunAllOnGPU()
+
+# Populate the model obj with the predict net stuff, which defines the structure of the model
+predict_net_proto = caffe2_pb2.NetDef()
+with open(PREDICT_NET, "rb") as f:
+    predict_net_proto.ParseFromString(f.read())
+tmp_predict_net = core.Net(predict_net_proto)
+test_model.net = tmp_predict_net
+
+# Populate the model obj with the init net stuff, which provides the parameters for the model
+init_net_proto = caffe2_pb2.NetDef()
+with open(INIT_NET, "rb") as f:
+    init_net_proto.ParseFromString(f.read())
+tmp_param_net = core.Net(init_net_proto)
+test_model.param_init_net = tmp_param_net
 
 
 ##################################################################################
@@ -50,6 +71,14 @@ cmat = np.zeros((5,5))
 # Initialization.
 test_dataset = jdh.Jester_Dataset(dictionary_file=test_dictionary,seq_size=10)
 
+# Prime the workspace with some data and run init net once
+for image, label in test_dataset.read(batch_size=1):
+    workspace.FeedBlob("data", image)
+    workspace.FeedBlob("label", label)
+    break
+workspace.RunNetOnce(test_model.param_init_net)
+workspace.CreateNet(test_model.net, overwrite=True)
+
 num_correct = 0
 total = 0
 
@@ -57,7 +86,11 @@ total = 0
 for stack, label in test_dataset.read(batch_size=1):
 
     # Run the stack through the predictor and get the result array
-    results = np.asarray(p.run([stack]))[0,0,:]
+    workspace.FeedBlob("data", stack, device_option=device_opts)
+    workspace.FeedBlob("label", label, device_option=device_opts)
+    workspace.RunNet(test_model.net)
+    results = workspace.FetchBlob('softmax')[0]
+
     print results
     # Get the top-1 prediction
     max_index, max_value = max(enumerate(results), key=operator.itemgetter(1))
@@ -78,6 +111,7 @@ print "Total Tests = {}".format(total)
 print "# Correct = {}".format(num_correct)
 print "Accuracy = {}".format(num_correct/float(total))
 
+'''
 # Plot confusion matrix
 fig = plt.figure()
 #plt.clf()
@@ -100,5 +134,5 @@ ax.set_xlabel('Predicted Class')
 ax.set_ylabel('True Class')
 plt.title('Jester 5-class Confusion Matrix')
 plt.show()
-
+'''
 
