@@ -1,3 +1,4 @@
 *.lmdb
 *.pb
 *.pyc
+.DS_Store
