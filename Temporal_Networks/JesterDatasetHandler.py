@@ -96,9 +96,17 @@ def make_list_of_seqs(ifile,seq_size):
 	    # Sort the array based on the sequence number [e.x. oflow_00028_00030_13_h.jpg ; seq# = 13]
 	    full_oflow_arr.sort(key=lambda x: int(x.split("_")[-2]))
 
+	    # Calculate the chunk that we are going to take out of the middle
+	    # If percent middle is 70%, we will not include the first 15% nor the last 15% in our stacks
+	    percent_middle = .7
+	    percent_of_sides = (1.-percent_middle)/2.
+	    start_ind = int(len(full_oflow_arr)*percent_of_sides)
+	    end_ind = int(len(full_oflow_arr) - start_ind - seq_size)
+
 	    # Add the subsequences of length seq_size (usually 10)
 	    # for   i < (len(arr) - 10)
-	    for i in range(len(full_oflow_arr)-seq_size+1):
+	    #for i in range(len(full_oflow_arr)-seq_size+1):
+	    for i in range(start_ind,end_ind+1):
 	        # Alloc list to store a single sequence of length seq_size
 	        single_seq = []
 	        # for j < 10
