@@ -43,12 +43,14 @@ def handle_greyscale(img):
     return img
 
 
-desired_h = 64
-desired_w = 64
+desired_h = 128 
+desired_w = 128
 
 # location of input pb's
-init_net_loc = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_NO_LMDB_output', 'mstar_NO_LMDB_init_net.pb')
-pred_net_loc = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_NO_LMDB_output', 'mstar_NO_LMDB_predict_net.pb')
+#init_net_loc = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_NO_LMDB_output', 'mstar_NO_LMDB_init_net.pb')
+#pred_net_loc = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_NO_LMDB_output', 'mstar_NO_LMDB_predict_net.pb')
+init_net_loc = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_output', 'mstar_init_net.pb')
+pred_net_loc = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_output', 'mstar_predict_net.pb')
 
 if len(sys.argv) != 2:
     print "Usage: mstar_test_jpg.py </path/to/img.jpg>"
@@ -69,9 +71,7 @@ orig_img = cv2.imread(img_loc).astype(np.float32)
 # resize image to desired dimensions
 orig_img = resize_image(orig_img, desired_h, desired_w)
 orig_img[:,:,(2,1,0)]
-orig_img = orig_img/255
-print(orig_img)
-img = orig_img
+img = orig_img/255
 # handle grayscale
 if ((img[:,:,0] == img[:,:,1]).all() and (img[:,:,0] == img[:,:,2]).all()):
     img = handle_greyscale(img)

@@ -1,10 +1,8 @@
 # MatthewInkawhich
 # Use this script to train a simple MNIST net on the lmdbs of your choice and save the trained model
-# LINES TO MODIFY:
+# LINES TO MODIFY BEFORE RUNNING:
 #   - Must manually set Configs
-#   - Modify AddLeNetModel function if your images are:
-#       (a) not 1 color channel
-#       (b) not 28x28
+
 
 from __future__ import print_function
 from matplotlib import pyplot
@@ -15,6 +13,9 @@ import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core, model_helper, net_drawer, workspace, visualize, brew, optimizer
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
+import sys
+sys.path.append(os.path.join(os.path.expanduser('~'), 'DukeML', 'caffe2_sandbox', 'lib'))
+import model_defs
 
 ########################################################################
 # Configs
@@ -32,12 +33,12 @@ training_iters = 500               #training iterations
 validation_images = 452            #total number of validation images
 validation_interval = 25            #validate every ... training iterations
 testing_images = 442               #total number of testing images
-image_width = 128
+image_width = 128 
 image_height = 128
-checkpoint_iters = 50
+image_channels = 1
 
-device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
 gpu_no = 0
+device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
 
 ########################################################################
 # create root_folder if not already there
@@ -52,77 +53,6 @@ print("workspace output folder:" + root_folder)
 ########################################################################
 # Functions
 ########################################################################
-# loads data from DB
-def AddInput(model, batch_size, db, db_type):
-    # load the data
-    data_uint8, label = model.TensorProtosDBInput(
-        [], ["data_uint8", "label"], batch_size=batch_size,
-        db=db, db_type=db_type)
-    # cast the data to float
-    data = model.Cast(data_uint8, "data", to=core.DataType.FLOAT)
-    # scale data from [0,255] down to [0,1]
-    data = model.Scale(data, data, scale=float(1./256))
-    # don't need the gradient for the backward pass
-    data = model.StopGradient(data, data)
-    return data, label
-
-
-def update_dims(height, width, kernel, stride, pad):
-    new_height = ((height - kernel + 2*pad)//stride) + 1
-    new_width = ((width - kernel + 2*pad)//stride) + 1
-    return new_height, new_width
-
-
-# define model architecture in terms of layers
-def AddLeNetModel(model, data, device_opts):
-    '''
-    This part is the standard LeNet model: from data to the softmax prediction.
-
-    For each convolutional layer we specify dim_in - number of input channels
-    and dim_out - number or output channels. Also each Conv and MaxPool layer changes the
-    image size. For example, kernel of size 5 reduces each side of an image by 4.
-
-    While when we have kernel and stride sizes equal 2 in a MaxPool layer, it divides
-    each side in half.
-    '''
-    with core.DeviceScope(device_opts):
-        ############# Change dim_in value if images are more than 1 color channel
-        # Image size: 64x64
-        conv1 = brew.conv(model, data, 'conv1', dim_in=1, dim_out=32, kernel=5)
-        h,w = update_dims(height=image_height, width=image_width, kernel=5, stride=1, pad=0)
-        # Image size: 60x60
-        pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
-        h,w = update_dims(height=h, width=w, kernel=2, stride=2, pad=0)
-        relu1 = brew.relu(model, pool1, 'relu1')
-        # Image size: 30x30
-        conv2 = brew.conv(model, relu1, 'conv2', dim_in=32, dim_out=64, kernel=5)
-        h,w = update_dims(height=h, width=w, kernel=5, stride=1, pad=0)
-        # Image size: 26x26
-        pool2 = brew.max_pool(model, conv2, 'pool2', kernel=2, stride=2)
-        h,w = update_dims(height=h, width=w, kernel=2, stride=2, pad=0)
-        relu2 = brew.relu(model, pool2, 'relu2')
-        # Image size: 13x13
-        conv3 = brew.conv(model, relu2, 'conv3', dim_in=64, dim_out=64, kernel=5)
-        h,w = update_dims(height=h, width=w, kernel=5, stride=1, pad=0)
-        # Image size: 9x9
-        pool3 = brew.max_pool(model, conv3, 'pool3', kernel=2, stride=2)
-        h,w = update_dims(height=h, width=w, kernel=2, stride=2, pad=0)
-        relu3 = brew.relu(model, pool3, 'relu3')
-        # Image size: 4x4
-        # 50 * 4 * 4 stands for dim_out from previous layer multiplied by the image size
-    	############# Change dim_in value if images are not 28x28
-    	fc3 = brew.fc(model, relu3, 'fc3', dim_in=64 * h * w, dim_out=500)
-    	fc3 = brew.relu(model, fc3, fc3)
-    	pred = brew.fc(model, fc3, 'pred', 500, num_classes)
-    	softmax = brew.softmax(model, pred, 'softmax')
-    	return softmax
-
-
-# accuracy operator
-def AddAccuracy(model, softmax, label):
-    """Adds an accuracy op to the model"""
-    accuracy = brew.accuracy(model, [softmax, label], "accuracy")
-    return accuracy
 
 
 # adds training operators to model
@@ -132,7 +62,7 @@ def AddTrainingOperators(model, softmax, label):
     # compute the expected loss
     loss = model.AveragedLoss(xent, "loss")
     # track the accuracy of the model
-    AddAccuracy(model, softmax, label)
+    model_defs.AddAccuracy(model, softmax, label)
     # use the average loss we just computed to add gradient operators to the model
     model.AddGradientOperators([loss])
     # do a simple stochastic gradient descent
@@ -146,90 +76,59 @@ def AddTrainingOperators(model, softmax, label):
 
 
 
-# collects stats to inspect later
-def AddBookkeepingOperators(model):
-    """This adds a few bookkeeping operators that we can inspect later.
-
-    These operators do not affect the training procedure: they only collect
-    statistics and prints them to file or to logs.
-    """
-    # Print basically prints out the content of the blob. to_file=1 routes the
-    # printed output to a file. The file is going to be stored under
-    #     root_folder/[blob name]
-    model.Print('accuracy', [], to_file=1)
-    model.Print('loss', [], to_file=1)
-    # Summarizes the parameters. Different from Print, Summarize gives some
-    # statistics of the parameter, such as mean, std, min and max.
-    for param in model.params:
-        model.Summarize(param, [], to_file=1)
-        model.Summarize(model.param_to_grad[param], [], to_file=1)
-    # Now, if we really want to be verbose, we can summarize EVERY blob
-    # that the model produces; it is probably not a good idea, because that
-    # is going to take time - summarization do not come for free. For this
-    # demo, we will only show how to summarize the parameters and their
-    # gradients.
-
-
-def AddCheckpoints(model, checkpoint_iters, db_type):
-    ITER = brew.iter(train_model, "iter")
-    train_model.Checkpoint([ITER] + train_model.params, [], db="mstar_lenet_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
-
-
-
 ########################################################################
 # Define training, testing, and deployment models
 ########################################################################
+#arg_scope = {"order": "NCHW"}
 arg_scope = {"order": "NCHW", "gpu_id": gpu_no, "use_cudnn": True}
 # Training model
 train_model = model_helper.ModelHelper(
     name="train_net", arg_scope=arg_scope)
-#train_model.net.RunAllOnGPU(gpu_id=gpu_no, use_cudnn=True)
-#train_model.param_init_net.RunAllOnGPU(gpu_id=gpu_no, use_cudnn=True)
-train_model.net.RunAllOnGPU()
+# Uncomment following two lines for GPU
 train_model.param_init_net.RunAllOnGPU()
-data, label = AddInput(
+train_model.net.RunAllOnGPU()
+data, label = model_defs.AddInput(
     train_model, batch_size=training_net_batch_size,
     db=training_lmdb,
     db_type='lmdb')
-softmax = AddLeNetModel(train_model, data, device_opts)
+softmax = model_defs.AddUpgradedLeNetModel_GPU(train_model, data, num_classes, image_height, image_width, image_channels, device_opts)
 AddTrainingOperators(train_model, softmax, label)
-AddCheckpoints(train_model, checkpoint_iters, db_type="lmdb")
 #AddBookkeepingOperators(train_model)
 
 
 # Validation model
 val_model = model_helper.ModelHelper(
     name="val_net", arg_scope=arg_scope, init_params=False)
-val_model.net.RunAllOnGPU()
+# Uncomment following two lines for GPU
 val_model.param_init_net.RunAllOnGPU()
-data, label = AddInput(
+val_model.net.RunAllOnGPU()
+data, label = model_defs.AddInput(
     val_model, batch_size=validation_images,
     db=validation_lmdb,
     db_type='lmdb')
-softmax = AddLeNetModel(val_model, data, device_opts)
-AddAccuracy(val_model, softmax, label)
+softmax = model_defs.AddUpgradedLeNetModel_GPU(val_model, data, num_classes, image_height, image_width, image_channels, device_opts)
+model_defs.AddAccuracy(val_model, softmax, label)
 
 
 # Testing model
 test_model = model_helper.ModelHelper(
     name="test_net", arg_scope=arg_scope, init_params=False)
-test_model.net.RunAllOnGPU()
+# Uncomment following two lines for GPU
 test_model.param_init_net.RunAllOnGPU()
-data, label = AddInput(
+test_model.net.RunAllOnGPU()
+data, label = model_defs.AddInput(
     test_model, batch_size=testing_images,
     db=testing_lmdb,
     db_type='lmdb')
-softmax = AddLeNetModel(test_model, data, device_opts)
-AddAccuracy(test_model, softmax, label)
+softmax = model_defs.AddUpgradedLeNetModel_GPU(test_model, data, num_classes, image_height, image_width, image_channels, device_opts)
+model_defs.AddAccuracy(test_model, softmax, label)
 
 
 # Deployment model
 deploy_model = model_helper.ModelHelper(
     name="mstar_deploy", arg_scope=arg_scope, init_params=False)
-AddLeNetModel(deploy_model, "data", device_opts)
-# You may wonder what happens with the param_init_net part of the deploy_model.
-# No, we will not use them, since during deployment time we will not randomly
-# initialize the parameters, but load the parameters from the db.
+model_defs.AddUpgradedLeNetModel_GPU(train_model, "data", num_classes, image_height, image_width, image_channels, device_opts)
+
 
 # Dump all protobufs to disk for later inspection
 with open(os.path.join(root_folder, "train_net.pbtxt"), 'w') as fid:
@@ -264,6 +163,8 @@ for i in range(training_iters):
     workspace.RunNet(train_model.net)
     accuracy[i] = workspace.FetchBlob('accuracy')
     loss[i] = workspace.FetchBlob('loss')
+    data = workspace.FetchBlob('data')
+    print("data.shape:", data.shape)
     if (i % validation_interval == 0):
         print("Training iter: ", i)
         #run validation
@@ -272,27 +173,26 @@ for i in range(training_iters):
         print("Validation accuracy: ", str(val_accuracy))
 
 
-
 # After the execution is done, let's plot the values.
-pyplot.plot(loss, 'b')
-pyplot.plot(accuracy, 'r')
-pyplot.legend(('Loss', 'Accuracy'), loc='upper right')
-pyplot.show()
+#pyplot.plot(loss, 'b')
+#pyplot.plot(accuracy, 'r')
+#pyplot.legend(('Loss', 'Accuracy'), loc='upper right')
+#pyplot.show()
 
 
 
 ########################################################################
 # View data
 ########################################################################
-pyplot.figure()
-data = workspace.FetchBlob('data')
+#pyplot.figure()
+#data = workspace.FetchBlob('data')
 #_ = visualize.NCHW.ShowSingle(data[0][0])
-_ = visualize.NCHW.ShowMultiple(data)
-pyplot.figure()
-softmax = workspace.FetchBlob('softmax')
-_ = pyplot.plot(softmax[0], 'ro')
-pyplot.title('Prediction for the first image')
-pyplot.show()
+#_ = visualize.NCHW.ShowMultiple(data)
+#pyplot.figure()
+#softmax = workspace.FetchBlob('softmax')
+#_ = pyplot.plot(softmax[0], 'ro')
+#pyplot.title('Prediction for the first image')
+#pyplot.show()
 
 
 

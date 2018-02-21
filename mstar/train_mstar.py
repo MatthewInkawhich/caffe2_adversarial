@@ -24,19 +24,21 @@ root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mstar_out
 save_trained_model_loc = root_folder
 init_net_out = os.path.join(save_trained_model_loc, 'mstar_init_net.pb')
 predict_net_out = os.path.join(save_trained_model_loc, 'mstar_predict_net.pb')
-training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar64', 'train_lmdb')
-validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar64', 'validate_lmdb')
-testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar64', 'test_lmdb')
+training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar', 'training_lmdb')
+validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar', 'validation_lmdb')
+testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'mstar', 'testing_lmdb')
 num_classes = 8                   #number of image classes
 training_net_batch_size = 50        #batch size for training
-training_iters = 200               #training iterations
+training_iters = 1000               #training iterations
 validation_images = 452            #total number of validation images
 validation_interval = 25            #validate every ... training iterations
 testing_images = 442               #total number of testing images
-image_width = 64
-image_height = 64
+image_width = 128 
+image_height = 128
 image_channels = 1
 
+gpu_no = 0
+device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
 
 ########################################################################
 # create root_folder if not already there
@@ -77,15 +79,19 @@ def AddTrainingOperators(model, softmax, label):
 ########################################################################
 # Define training, testing, and deployment models
 ########################################################################
-arg_scope = {"order": "NCHW"}
+#arg_scope = {"order": "NCHW"}
+arg_scope = {"order": "NCHW", "gpu_id": gpu_no, "use_cudnn": True}
 # Training model
 train_model = model_helper.ModelHelper(
     name="train_net", arg_scope=arg_scope)
+# Uncomment following two lines for GPU
+train_model.param_init_net.RunAllOnGPU()
+train_model.net.RunAllOnGPU()
 data, label = model_defs.AddInput(
     train_model, batch_size=training_net_batch_size,
     db=training_lmdb,
     db_type='lmdb')
-softmax = model_defs.AddUpgradedLeNetModel(train_model, data, num_classes, image_height, image_width, image_channels)
+softmax = model_defs.AddUpgradedLeNetModel_GPU(train_model, data, num_classes, image_height, image_width, image_channels, device_opts)
 AddTrainingOperators(train_model, softmax, label)
 #AddBookkeepingOperators(train_model)
 
@@ -93,29 +99,35 @@ AddTrainingOperators(train_model, softmax, label)
 # Validation model
 val_model = model_helper.ModelHelper(
     name="val_net", arg_scope=arg_scope, init_params=False)
+# Uncomment following two lines for GPU
+val_model.param_init_net.RunAllOnGPU()
+val_model.net.RunAllOnGPU()
 data, label = model_defs.AddInput(
     val_model, batch_size=validation_images,
     db=validation_lmdb,
     db_type='lmdb')
-softmax = model_defs.AddUpgradedLeNetModel(val_model, data, num_classes, image_height, image_width, image_channels)
+softmax = model_defs.AddUpgradedLeNetModel_GPU(val_model, data, num_classes, image_height, image_width, image_channels, device_opts)
 model_defs.AddAccuracy(val_model, softmax, label)
 
 
 # Testing model
 test_model = model_helper.ModelHelper(
     name="test_net", arg_scope=arg_scope, init_params=False)
+# Uncomment following two lines for GPU
+test_model.param_init_net.RunAllOnGPU()
+test_model.net.RunAllOnGPU()
 data, label = model_defs.AddInput(
     test_model, batch_size=testing_images,
     db=testing_lmdb,
     db_type='lmdb')
-softmax = model_defs.AddUpgradedLeNetModel(test_model, data, num_classes, image_height, image_width, image_channels)
+softmax = model_defs.AddUpgradedLeNetModel_GPU(test_model, data, num_classes, image_height, image_width, image_channels, device_opts)
 model_defs.AddAccuracy(test_model, softmax, label)
 
 
 # Deployment model
 deploy_model = model_helper.ModelHelper(
     name="mstar_deploy", arg_scope=arg_scope, init_params=False)
-model_defs.AddUpgradedLeNetModel(train_model, "data", num_classes, image_height, image_width, image_channels)
+model_defs.AddUpgradedLeNetModel_GPU(train_model, "data", num_classes, image_height, image_width, image_channels, device_opts)
 
 
 # Dump all protobufs to disk for later inspection
