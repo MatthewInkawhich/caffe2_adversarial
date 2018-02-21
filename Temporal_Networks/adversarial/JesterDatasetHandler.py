@@ -152,6 +152,7 @@ class Jester_Dataset(object):
 
 			#print "Current Batch : {}".format(batch)
 			oflow_batch, labels = [], []
+			lseq = []
 
 			for index in batch:
 
@@ -160,6 +161,7 @@ class Jester_Dataset(object):
 
 				# Extract the sequence of .jpgs
 				seq = single_seq[0]
+				lseq.append(seq)
 
 				# Extract the label
 				label = int(single_seq[1])
@@ -171,4 +173,4 @@ class Jester_Dataset(object):
 				oflow_batch.append(oflow_stack)
 				labels.append(label)
 
-			yield np.stack(oflow_batch).astype(np.float32), np.stack(labels).astype(np.int32).reshape((batch_size,))
+			yield np.stack(oflow_batch).astype(np.float32), np.stack(labels).astype(np.int32).reshape((batch_size,)), lseq

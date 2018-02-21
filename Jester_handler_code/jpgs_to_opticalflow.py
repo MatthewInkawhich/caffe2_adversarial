@@ -37,10 +37,10 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
     # https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
 
     # NATES CV2
-    #flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 
     # MATTS CV2
-    flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
+    #flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
 
     h_oflow = flow[...,0]
     v_oflow = flow[...,1]
@@ -93,7 +93,7 @@ def calc_optical_flow(img1, img2, method, ofile_name_horizontal, ofile_name_vert
 # ***************************************************************
 # MAIN
 
-dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
+dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
 jester_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1")
 oflow_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1-oflow")
 

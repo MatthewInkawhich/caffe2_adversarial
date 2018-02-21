@@ -21,12 +21,11 @@ import JesterDatasetHandler as jdh
 
 ##################################################################################
 # Gather Inputs
-train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/SMALL_TrainDictionary_5class.txt")
-INIT_NET = os.path.join(os.path.expanduser('~'),"DukeML/caffe2_sandbox/Temporal_Networks/CNNM_2k_jester_init_net.pb")
-init_net_out = "CNNM_Retrained_jester_init_net.pb"
-training_iters = 2000
+train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
+INIT_NET = os.path.join(os.path.expanduser('~'),"DukeML/caffe2_sandbox/Temporal_Networks/CNNM_2epoch_jester_init_net.pb")
+init_net_out = "CNNM_4epoch_jester_init_net.pb"
 checkpoint_iters = 1000
-
+num_epochs = 2
 ##################################################################################
 # MAIN
 
@@ -132,7 +131,7 @@ train_model.param_init_net = tmp_param_net
 #### Step 3: Add training operators to the model
 
 ITER = brew.iter(train_model, "iter")
-train_model.Checkpoint([ITER] + train_model.params, [], db="cnnm_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
+train_model.Checkpoint([ITER] + train_model.params, [], db="cnnm_checkpoint1_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
 
 
 xent = train_model.LabelCrossEntropy(['softmax', 'label'], 'xent')
@@ -140,7 +139,7 @@ loss = train_model.AveragedLoss(xent, 'loss')
 brew.accuracy(train_model, ['softmax', 'label'], 'accuracy')
 train_model.AddGradientOperators([loss])
 
-optimizer.build_sgd(train_model,base_learning_rate=0.1, policy="step", stepsize=1, gamma=0.999)
+optimizer.build_sgd(train_model,base_learning_rate=0.01, policy="step", stepsize=10000, gamma=0.1, momentum=0.9)
 
 ##################################################################################
 #### Run the training procedure
@@ -162,13 +161,12 @@ workspace.CreateNet(train_model.net, overwrite=True)
 
 
 # Set the total number of iterations and track the accuracy and loss
-total_iters = training_iters
 accuracy = []
 loss = []
 
 batch_size = 50
 # Manually run the network for the specified amount of iterations
-for epoch in range(1):
+for epoch in range(num_epochs):
 
 	for index, (image, label) in enumerate(train_dataset.read(batch_size)):
 		workspace.FeedBlob("data", image)

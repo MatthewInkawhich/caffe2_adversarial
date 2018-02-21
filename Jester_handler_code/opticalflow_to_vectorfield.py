@@ -42,10 +42,10 @@ def calc_optical_flow(im1, im2):
     f2_gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
     # NATES CV2
-    #flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 
     # MATTS CV2
-    flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
+    #flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 15, 3, 5, 1.2, 0)
     h_oflow = flow[...,0]
     v_oflow = flow[...,1]
 
@@ -133,8 +133,8 @@ def preprocess_optical_flow_jpg(h_path, v_path):
 ### (1) Print optical flow from two sequential spatial images
 
 # Paths to spatial jpg frames
-im1 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '13377', '00010.jpg')
-im2 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '13377', '00012.jpg')
+im1 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '9', '00010.jpg')
+im2 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '9', '00012.jpg')
 
 # Calculate optical flow
 h, v, f1_gray, f2_gray = calc_optical_flow(im1, im2)
