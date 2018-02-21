@@ -12,6 +12,8 @@ from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
 import cv2
 import glob
+sys.path.append(os.path.join(os.path.expanduser('~'), 'DukeML', 'caffe2_sandbox', 'lib'))
+import image_manipulation
 
 
 ########################################################################

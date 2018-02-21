@@ -15,6 +15,10 @@ import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core, model_helper, net_drawer, workspace, visualize, brew, optimizer
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
+import sys
+sys.path.append(os.path.join(os.path.expanduser('~'), 'DukeML', 'caffe2_sandbox', 'lib'))
+import model_defs
+
 
 ########################################################################
 # Configs
@@ -23,15 +27,18 @@ root_folder = os.path.join(os.path.expanduser('~'), 'DukeML', 'junk', 'mnist_out
 save_trained_model_loc = root_folder
 init_net_out = os.path.join(save_trained_model_loc, 'mnist_init_net.pb')
 predict_net_out = os.path.join(save_trained_model_loc, 'mnist_predict_net.pb')
-training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_training_lmdb')
-validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_validation_lmdb')
-testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'tmp_testing_lmdb')
+training_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'train_lmdb')
+validation_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'validate_lmdb')
+testing_lmdb = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'custom_mnist', 'test_lmdb')
 num_classes = 10                    #number of image classes
 training_net_batch_size = 50        #batch size for training
 validation_images = 2000            #total number of validation images
 testing_images = 2000               #total number of testing images
 training_iters = 500               #training iterations
 validation_interval = 50            #validate every ... training iterations
+image_height = 28
+image_width = 28
+image_channels = 1
 
 ########################################################################
 # create root_folder if not already there
@@ -46,58 +53,6 @@ print("workspace output folder:" + root_folder)
 ########################################################################
 # Functions
 ########################################################################
-# loads data from DB
-def AddInput(model, batch_size, db, db_type):
-    # load the data
-    data_uint8, label = model.TensorProtosDBInput(
-        [], ["data_uint8", "label"], batch_size=batch_size,
-        db=db, db_type=db_type)
-    # cast the data to float
-    data = model.Cast(data_uint8, "data", to=core.DataType.FLOAT)
-    # scale data from [0,255] down to [0,1]
-    data = model.Scale(data, data, scale=float(1./256))
-    # don't need the gradient for the backward pass
-    data = model.StopGradient(data, data)
-    return data, label
-
-
-# define model architecture in terms of layers
-def AddLeNetModel(model, data):
-    '''
-    This part is the standard LeNet model: from data to the softmax prediction.
-
-    For each convolutional layer we specify dim_in - number of input channels
-    and dim_out - number or output channels. Also each Conv and MaxPool layer changes the
-    image size. For example, kernel of size 5 reduces each side of an image by 4.
-
-    While when we have kernel and stride sizes equal 2 in a MaxPool layer, it divides
-    each side in half.
-    '''
-
-    # Image size: 28 x 28 -> 24 x 24
-    ############# Change dim_in value if images are more than 1 color channel
-    conv1 = brew.conv(model, data, 'conv1', dim_in=1, dim_out=20, kernel=5)
-    # Image size: 24 x 24 -> 12 x 12
-    pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
-    # Image size: 12 x 12 -> 8 x 8
-    conv2 = brew.conv(model, pool1, 'conv2', dim_in=20, dim_out=50, kernel=5)
-    # Image size: 8 x 8 -> 4 x 4
-    pool2 = brew.max_pool(model, conv2, 'pool2', kernel=2, stride=2)
-    # 50 * 4 * 4 stands for dim_out from previous layer multiplied by the image size
-    ############# Change dim_in value if images are not 28x28
-    fc3 = brew.fc(model, pool2, 'fc3', dim_in=50 * 4 * 4, dim_out=500)
-    fc3 = brew.relu(model, fc3, fc3)
-    pred = brew.fc(model, fc3, 'pred', 500, num_classes)
-    softmax = brew.softmax(model, pred, 'softmax')
-    return softmax
-
-
-# accuracy operator
-def AddAccuracy(model, softmax, label):
-    """Adds an accuracy op to the model"""
-    accuracy = brew.accuracy(model, [softmax, label], "accuracy")
-    return accuracy
-
 
 # adds training operators to model
 def AddTrainingOperators(model, softmax, label):
@@ -106,7 +61,7 @@ def AddTrainingOperators(model, softmax, label):
     # compute the expected loss
     loss = model.AveragedLoss(xent, "loss")
     # track the accuracy of the model
-    AddAccuracy(model, softmax, label)
+    model_defs.AddAccuracy(model, softmax, label)
     # use the average loss we just computed to add gradient operators to the model
     model.AddGradientOperators([loss])
     # do a simple stochastic gradient descent
@@ -120,31 +75,6 @@ def AddTrainingOperators(model, softmax, label):
 
 
 
-# collects stats to inspect later
-def AddBookkeepingOperators(model):
-    """This adds a few bookkeeping operators that we can inspect later.
-
-    These operators do not affect the training procedure: they only collect
-    statistics and prints them to file or to logs.
-    """
-    # Print basically prints out the content of the blob. to_file=1 routes the
-    # printed output to a file. The file is going to be stored under
-    #     root_folder/[blob name]
-    model.Print('accuracy', [], to_file=1)
-    model.Print('loss', [], to_file=1)
-    # Summarizes the parameters. Different from Print, Summarize gives some
-    # statistics of the parameter, such as mean, std, min and max.
-    for param in model.params:
-        model.Summarize(param, [], to_file=1)
-        model.Summarize(model.param_to_grad[param], [], to_file=1)
-    # Now, if we really want to be verbose, we can summarize EVERY blob
-    # that the model produces; it is probably not a good idea, because that
-    # is going to take time - summarization do not come for free. For this
-    # demo, we will only show how to summarize the parameters and their
-    # gradients.
-
-
-
 ########################################################################
 # Define training, testing, and deployment models
 ########################################################################
@@ -152,35 +82,35 @@ arg_scope = {"order": "NCHW"}
 # Training model
 train_model = model_helper.ModelHelper(
     name="train_net", arg_scope=arg_scope)
-data, label = AddInput(
+data, label = model_defs.AddInput(
     train_model, batch_size=training_net_batch_size,
     db=training_lmdb,
     db_type='lmdb')
-softmax = AddLeNetModel(train_model, data)
+softmax = model_defs.AddLeNetModel(train_model, data, num_classes, image_height, image_width, image_channels)
 AddTrainingOperators(train_model, softmax, label)
-AddBookkeepingOperators(train_model)
+model_defs.AddBookkeepingOperators(train_model)
 
 
 # Validation model
 val_model = model_helper.ModelHelper(
     name="val_net", arg_scope=arg_scope, init_params=False)
-data, label = AddInput(
+data, label = model_defs.AddInput(
     val_model, batch_size=validation_images,
     db=validation_lmdb,
     db_type='lmdb')
-softmax = AddLeNetModel(val_model, data)
-AddAccuracy(val_model, softmax, label)
+softmax = model_defs.AddLeNetModel(val_model, data, num_classes, image_height, image_width, image_channels)
+model_defs.AddAccuracy(val_model, softmax, label)
 
 
 # Testing model
 test_model = model_helper.ModelHelper(
     name="test_net", arg_scope=arg_scope, init_params=False)
-data, label = AddInput(
+data, label = model_defs.AddInput(
     test_model, batch_size=testing_images,
     db=testing_lmdb,
     db_type='lmdb')
-softmax = AddLeNetModel(test_model, data)
-AddAccuracy(test_model, softmax, label)
+softmax = model_defs.AddLeNetModel(test_model, data, num_classes, image_height, image_width, image_channels)
+model_defs.AddAccuracy(test_model, softmax, label)
 
 print("###### Hello!!")
 print("Params and grads:")
@@ -190,7 +120,7 @@ for param, grad in test_model.param_to_grad.items():
 # Deployment model
 deploy_model = model_helper.ModelHelper(
     name="mstar_deploy", arg_scope=arg_scope, init_params=False)
-AddLeNetModel(deploy_model, "data")
+model_defs.AddLeNetModel(deploy_model, "data", num_classes, image_height, image_width, image_channels)
 # You may wonder what happens with the param_init_net part of the deploy_model.
 # No, we will not use them, since during deployment time we will not randomly
 # initialize the parameters, but load the parameters from the db.

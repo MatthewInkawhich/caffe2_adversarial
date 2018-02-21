@@ -141,8 +141,8 @@ for _ in range(num_images):
     #print('\nlabel: ', label[0])
     data_grad = workspace.FetchBlob('data_grad')
     print("data_grad.shape", data_grad.shape)
-    print("data_grad", data_grad)
-    exit()
+    #print("data_grad", data_grad)
+
     h, w = I.shape
     #print('h:', h, 'w:', w)
 
@@ -174,6 +174,8 @@ for _ in range(num_images):
     plt.imshow(fgs_img, cmap='gray')
     plt.axis('off')
     #plt.savefig("~/DukeML/junk/im" + str(total) + ".png")
+    plt.show()
+    plt.imshow(epsilon_sign_matrix, cmap='gray')
     plt.show()
     continue
 

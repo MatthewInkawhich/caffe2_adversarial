@@ -11,17 +11,19 @@ import cv2
 from scipy.misc import imresize, imsave
 import lmdb
 from caffe2.proto import caffe2_pb2
-
+import sys
+sys.path.append(os.path.join(os.path.expanduser('~'), 'DukeML', 'caffe2_sandbox', 'lib'))
+import image_manipulation
 
 
 ########################################################################
 # Configs
 ########################################################################
 # Input dictionary (assuming this is not the full dictionary)
-input_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
+input_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
 seq_size = 10
 list_of_seqs = []
-training_output = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', 'jester_oflow_10stacked_train_lmdb')
+training_output = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', 'jester_oflow_10stacked_test_lmdb')
 
 
 
@@ -29,26 +31,6 @@ training_output = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'j
 ########################################################################
 # Functions
 ########################################################################
-def crop_center(img, new_height, new_width):
-    orig_height, orig_width, _ = img.shape
-    startx = (orig_width//2) - (new_width//2)
-    starty = (orig_height//2) - (new_height//2)
-    return img[starty:starty+new_height, startx:startx+new_width]
-
-
-def resize_image(img, new_height, new_width):
-    h, w, _ = img.shape
-    if (h < new_height or w < new_width):
-        img_data_r = imresize(img, (new_height, new_width))
-    else:
-        img_data_r = crop_center(img, new_height, new_width)
-    return img_data_r
-
-
-def handle_greyscale(img):
-    img = img[:,:,0]
-    img = np.expand_dims(img, axis=0)
-    return img
 
 def preprocess_and_create_lmdb(list_of_seqs, lmdb_name):
     print(">>> Write " + str(lmdb_name) + " database...")
@@ -62,14 +44,13 @@ def preprocess_and_create_lmdb(list_of_seqs, lmdb_name):
 
         seq = s[0]
         label = int(s[1])
-        
-        #exit()
 
         first = True
         for of_file in seq:
             of_img = cv2.imread(of_file).astype(np.float32)
-            of_img = resize_image(of_img, 100, 100)
-            of_img = handle_greyscale(of_img)
+            of_img = image_manipulation.resize_image(of_img, 100, 100)
+            of_img = image_manipulation.handle_greyscale(of_img)
+            of_img = np.transpose(of_img, (2,0,1))
             if (first):
                 seq_for_lmdb = of_img
                 first = False
@@ -130,7 +111,7 @@ for line in infile:
     path = path.replace("20bn-jester-v1","20bn-jester-v1-oflow")
 
     assert(os.path.exists(path) == True)
-    
+
     # Go into each directory and get an array of jpgs in the directory (these are full paths)
     # Note: we only grab _h here, but we assume the _v exists
     full_oflow_arr = glob.glob(path + "/*_h.jpg")
@@ -165,5 +146,3 @@ print('\nTotal number of sequences:', num_sequences)
 
 ### Create training lmdb
 preprocess_and_create_lmdb(list_of_seqs, training_output)
-
-
