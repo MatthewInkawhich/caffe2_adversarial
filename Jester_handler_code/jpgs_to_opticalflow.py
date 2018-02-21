@@ -17,9 +17,12 @@ import optical_flow
 # ***************************************************************
 # MAIN
 
-dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
+dictionary_file = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
 jester_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1")
 oflow_root_dir = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/20bn-jester-v1-oflow")
+
+image_height = 100
+image_width = 100
 
 fin = open(dictionary_file,"rb")
 
@@ -39,18 +42,20 @@ for line in fin:
     # names = ['00001.jpg', '00002.jpg', ...]
     names = [os.path.split(img)[-1] for img in jpg_arr]
     names.sort()
-    #print names
+    #print len(names)
 
 
     # Remove the odd indexes (downsample by 2)
     # This will calculate optical flow between 0,2 ; 2,4 ; 4,6 ; 6,8 ; ...
-    cnt = 0
-    new_names = []
-    for name in names:
-        if cnt % 2 != 0:
-            new_names.append(name)
-        cnt+=1
-    names=new_names
+    # cnt = 0
+    # new_names = []
+    # for name in names:
+    #     if cnt % 2 != 0:
+    #         new_names.append(name)
+    #     cnt+=1
+    # names=new_names
+
+
 
 
     # create the oflow directory for this scene if it does not exist
@@ -83,4 +88,4 @@ for line in fin:
         # print "\tIn4: ", in4
 
         # Calculate the optical flow between the frames
-        optical_flow.write_optical_flow(in1, in2, in3, in4)
+        optical_flow.write_optical_flow(in1, in2, in3, in4, image_height, image_width)
