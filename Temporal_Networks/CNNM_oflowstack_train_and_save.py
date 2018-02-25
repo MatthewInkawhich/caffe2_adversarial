@@ -24,10 +24,10 @@ import JesterDatasetHandler as jdh
 train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
 #train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/VerySmallTestDictionary_5class.txt")
 predict_net_out = "CNNM_jester_predict_net.pb" # Note: these are in PWD
-init_net_out = "CNNM_2epoch_jester_init_net.pb"
+init_net_out = "CNNM_1epoch_jester_init_net.pb"
 checkpoint_iters = 1000
 batch_size = 50
-num_epochs = 2
+num_epochs = 1 
 
 gpu_no = 0
 device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
@@ -162,15 +162,15 @@ workspace.CreateNet(train_model.net, overwrite=True)
 # Set the total number of iterations and track the accuracy and loss
 accuracy = []
 loss = []
-
+cnt = 0
 # Manually run the network for the specified amount of iterations
 for epoch in range(num_epochs):
 
 	for index, (image, label) in enumerate(train_dataset.read(batch_size)):
 
 		# image.shape = [bsize, 20, 100, 100]
-		workspace.FeedBlob("data", image)
-		workspace.FeedBlob("label", label)
+		workspace.FeedBlob("data", image, device_option=device_opts)
+		workspace.FeedBlob("label", label, device_option=device_opts)
 		workspace.RunNet(train_model.net)
 
 		# Look at data grad stuff
@@ -184,7 +184,10 @@ for epoch in range(num_epochs):
 		accuracy.append(curr_acc)
 		loss.append(curr_loss)
 		print "[{}][{}/{}] loss={}, accuracy={}".format(epoch, index, int(len(train_dataset) / batch_size),curr_loss, curr_acc)
-
+		#cnt += 1
+		#if cnt == 100:
+		#	break
+	#break
 
 ##################################################################################
 #### Save the trained model for testing later
@@ -209,7 +212,7 @@ with open(predict_net_out, 'wb') as f:
 print "Done, saving..."
 
 # After execution is done lets plot the values
-pyplot.plot(np.array(loss),'b', label='loss')
-pyplot.plot(np.array(accuracy),'r', label='accuracy')
-pyplot.legend(loc='upper right')
-pyplot.show()
+#pyplot.plot(np.array(loss),'b', label='loss')
+#pyplot.plot(np.array(accuracy),'r', label='accuracy')
+#pyplot.legend(loc='upper right')
+#pyplot.show()

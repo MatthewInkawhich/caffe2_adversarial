@@ -118,6 +118,11 @@ def make_list_of_seqs(ifile,seq_size):
 	        # Add this single sequence to the global list of sequences and the label
 	        my_list_of_seqs.append([single_seq, label])
 
+	    #print start_ind
+ 	    #print end_ind
+	    #print my_list_of_seqs
+	    #exit()
+
 	# randomly shuffle list of contiguous sequences
 	random.shuffle(my_list_of_seqs)
 
