@@ -11,11 +11,11 @@
 # import dependencies
 print "Import Dependencies..."
 import matplotlib.pyplot as plt
-import numpy as np 
+import numpy as np
 import os
 import shutil
 import operator
-import caffe2.python.predictor.predictor_exporter as pe 
+import caffe2.python.predictor.predictor_exporter as pe
 from caffe2.python import core,model_helper,net_drawer,optimizer,workspace,visualize,brew,utils
 from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
@@ -26,9 +26,14 @@ import JesterDatasetHandler as jdh
 
 ##################################################################################
 # Gather Inputs
+
 test_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/VerySmallTestDictionary_5class.txt")
 predict_net = "CNNM_jester_predict_net.pb"
-init_net = "CNNM_4epoch_jester_init_net.pb"
+init_net = "CNNM_2epoch_jester_init_net.pb"
+
+
+device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
+
 
 
 ##################################################################################
@@ -64,7 +69,7 @@ for stack, label in test_dataset.read(batch_size=1):
 
     print "Prediction: ", max_index
     print "Confidence: ", max_value
-    
+
     # Update confusion matrix
     cmat[label,max_index] += 1
 
@@ -72,12 +77,13 @@ for stack, label in test_dataset.read(batch_size=1):
         num_correct += 1
 
     total += 1
-    
+
 print "\n**************************************"
 print "Total Tests = {}".format(total)
 print "# Correct = {}".format(num_correct)
 print "Accuracy = {}".format(num_correct/float(total))
 
+'''
 # Plot confusion matrix
 fig = plt.figure()
 #plt.clf()
@@ -100,5 +106,8 @@ ax.set_xlabel('Predicted Class')
 ax.set_ylabel('True Class')
 plt.title('Jester 5-class Confusion Matrix')
 plt.show()
+<<<<<<< HEAD
+=======
+'''
 
-
+>>>>>>> 7453e8964d15270e7ce50d2c23288c7c60b4978b

@@ -57,6 +57,18 @@ def create_oflow_stack(seq):
 
 		#print "Printing"
 		#print oflow_stack
+	#print oflow_stack.max()
+	#print oflow_stack.min()	
+
+	# Normalize the whole stack to [0,1]
+	if oflow_stack.max() != oflow_stack.min():
+		oflow_stack = (oflow_stack-oflow_stack.min())/(oflow_stack.max()-oflow_stack.min()) 
+
+	#print oflow_stack.max()
+	#print oflow_stack.min()	
+	
+	#exit()
+
 	return oflow_stack
 	#exit()
 
@@ -117,6 +129,11 @@ def make_list_of_seqs(ifile,seq_size):
 	            single_seq.append(full_oflow_arr[i+j].replace("_h.jpg","_v.jpg"))
 	        # Add this single sequence to the global list of sequences and the label
 	        my_list_of_seqs.append([single_seq, label])
+
+	    #print start_ind
+ 	    #print end_ind
+	    #print my_list_of_seqs
+	    #exit()
 
 	# randomly shuffle list of contiguous sequences
 	random.shuffle(my_list_of_seqs)
