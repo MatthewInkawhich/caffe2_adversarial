@@ -144,7 +144,7 @@ def AddUpgradedLeNetModel_GPU(model, data, num_classes, image_height, image_widt
     	pool2 = brew.max_pool(model, conv2, 'pool2', kernel=2, stride=2)
     	h,w = update_dims(height=h, width=w, kernel=2, stride=2, pad=0)
     	relu2 = brew.relu(model, pool2, 'relu2')
-	# Image size: 13x13
+	    # Image size: 13x13
     	conv3 = brew.conv(model, relu2, 'conv3', dim_in=64, dim_out=64, kernel=5)
     	h,w = update_dims(height=h, width=w, kernel=5, stride=1, pad=0)
     	# Image size: 9x9
@@ -159,3 +159,68 @@ def AddUpgradedLeNetModel_GPU(model, data, num_classes, image_height, image_widt
     	pred = brew.fc(model, fc3, 'pred', 500, num_classes)
     	softmax = brew.softmax(model, pred, 'softmax')
     	return softmax
+
+
+def Add_CNN_M(model,data, device_opts):
+
+	# Shape here = 20x100x100
+	with core.DeviceScope(device_opts):
+		##### CONV-1
+		conv1 = brew.conv(model, data, 'conv1', dim_in=20, dim_out=96, kernel=7, stride=2, pad=0)
+		#norm1 = brew.lrn(model, conv1, 'norm1',order = "NCHW")
+		# Shape here = 96x47x47
+		pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
+		# Shape here = 96x23x23
+		relu1 = brew.relu(model, pool1, 'relu1')
+
+		# Shape here = 96x23x23
+
+		##### CONV-2
+		conv2 = brew.conv(model, 'relu1', 'conv2', dim_in=96, dim_out=256, kernel=5, stride=2, pad=1)
+		# Shape here = 256x11x11
+		pool2 = brew.max_pool(model, conv2, 'pool2', kernel=2, stride=2)
+		# Shape here = 256x5x5
+		relu2 = brew.relu(model, pool2, 'relu2')
+
+		# Shape here = 256x5x5
+
+		##### CONV-3
+		conv3 = brew.conv(model, 'relu2', 'conv3', dim_in=256, dim_out=512, kernel=3, stride=1, pad=1)
+		# Shape here = 512x5x5
+		relu3 = brew.relu(model, conv3, 'relu3')
+
+		# Shape here = 512x5x5
+
+		##### CONV-4
+		conv4 = brew.conv(model, 'relu3', 'conv4', dim_in=512, dim_out=512, kernel=3, stride=1, pad=1)
+		# Shape here = 512x5x5
+		relu4 = brew.relu(model, conv4, 'relu4')
+
+		# Shape here = 512x5x5
+
+		##### CONV-5
+		conv5 = brew.conv(model, 'relu4', 'conv5', dim_in=512, dim_out=512, kernel=3, stride=1, pad=1)
+		# Shape here = 512x5x5
+		pool5 = brew.max_pool(model, conv5, 'pool5', kernel=2, stride=2)
+		# Shape here = 512x2x2
+		relu5 = brew.relu(model, pool5, 'relu5')
+
+		# Shape here = 512x2x2
+
+		fc6 = brew.fc(model, relu5, 'fc6', dim_in=512*2*2, dim_out=4096)
+		relu6 = brew.relu(model, fc6, 'relu6')
+
+		# Shape here = 1x4096
+
+		fc7 = brew.fc(model, relu6, 'fc7', dim_in=4096, dim_out=4096)
+		relu7 = brew.relu(model, fc7, 'relu7')
+
+		# Shape here = 1x4096
+
+		fc8 = brew.fc(model, relu7, 'fc8', dim_in=4096, dim_out=5)
+
+		# Shape here = 1x5
+
+		softmax = brew.softmax(model,fc8, 'softmax')
+
+		return softmax
