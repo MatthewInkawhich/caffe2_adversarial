@@ -343,45 +343,57 @@ for stack, label, seq in test_dataset.read(batch_size=1,shuffle=False):
     ##############################################################
     # Visualize the perturbed spatial frames
     ##############################################################
-    '''
+    
     plt.subplot(3,4,1)
+    plt.axis("off")
     new = Img_arr[0].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.subplot(3,4,2)
+    plt.axis("off")
     new = Img_arr[1].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.subplot(3,4,3)
+    plt.axis("off")
     new = Img_arr[2].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
 
     plt.subplot(3,4,4)
+    plt.axis("off")
     new = Img_arr[3].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.subplot(3,4,5)
+    plt.axis("off")
     new = Img_arr[4].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.subplot(3,4,6)
+    plt.axis("off")
     new = Img_arr[5].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
 
     plt.subplot(3,4,7)
+    plt.axis("off")
     new = Img_arr[6].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.subplot(3,4,8)
+    plt.axis("off")
     new = Img_arr[7].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.subplot(3,4,9)
+    plt.axis("off")
     new = Img_arr[8].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
 
     plt.subplot(3,4,10)
+    plt.axis("off")
     new = Img_arr[9].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.subplot(3,4,11)
+    plt.axis("off")
     new = Img_arr[10].swapaxes(0, 1).swapaxes(1, 2)
     plt.imshow(new[:,:,(2,1,0)])
     plt.show()
-    '''
+    
+    exit()
  
     ##############################################################
     # Recompute optical flow between perturbed spatial frames
