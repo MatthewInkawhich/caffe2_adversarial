@@ -45,7 +45,7 @@ if ((not os.path.exists(TEST_LMDB)) or (not os.path.exists(INIT_NET)) or (not os
 
 lmdb_env = lmdb.open(TEST_LMDB, readonly=True)
 num_images = lmdb_env.stat()['entries']
-print('num_images:',lmdb_env.stat()['entries'])
+print('num_images:', str(num_images))
 
 
 
@@ -81,8 +81,6 @@ with open(PREDICT_NET, "rb") as f:
 tmp_predict_net = core.Net(predict_net_proto)
 test_model.net = test_model.net.AppendNet(tmp_predict_net)
 
-predictor = workspace.Predictor(init_net_proto, predict_net_proto)
-
 
 ##### Externally initialize params so we can extract gradients
 for i,op in enumerate(init_net_proto.op):
@@ -99,6 +97,7 @@ loss = test_model.AveragedLoss(xent, 'loss')
 test_model.AddGradientOperators([loss])
 
 
+predictor = workspace.Predictor(init_net_proto, predict_net_proto)
 
 
 #########################################################################

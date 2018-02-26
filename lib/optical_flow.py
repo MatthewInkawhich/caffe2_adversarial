@@ -32,13 +32,22 @@ def calc_optical_flow(im1, im2, image_height, image_width):
     print "\tmin: ",h_oflow.min()
     print "\tmean: ",h_oflow.mean()
 
-    h_oflow[h_oflow < -127] = -127
-    h_oflow[h_oflow > 127] = 127
-    v_oflow[v_oflow < -127] = -127
-    v_oflow[v_oflow > 127] = 127
-    h_oflow = np.rint(h_oflow)
-    v_oflow = np.rint(v_oflow)
-
+    # h_oflow[h_oflow < -127] = -127
+    # h_oflow[h_oflow > 127] = 127
+    # v_oflow[v_oflow < -127] = -127
+    # v_oflow[v_oflow > 127] = 127
+    # h_oflow = np.rint(h_oflow)
+    # v_oflow = np.rint(v_oflow)
+    h_oflow *= 10
+    v_oflow *= 10
+    #h_oflow += 127
+    #v_oflow += 127
+    #h_oflow[h_oflow > 255] = 255
+    #h_oflow[h_oflow < 0] = 0
+    #v_oflow[v_oflow > 255] = 255
+    #v_oflow[v_oflow < 0] = 0
+    #h_oflow = np.rint(h_oflow)
+    #_oflow = np.rint(v_oflow)
     print "\tAfter adjustment..."
     print "\tmax: ",h_oflow.max()
     print "\tmin: ",h_oflow.min()
@@ -78,14 +87,25 @@ def write_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical, i
 
     # Normalize
     # Multiply by 10, recenter to 127, cap at [0,255], round to int
-    h_oflow *= 10
-    v_oflow *= 10
-    h_oflow += 127
-    v_oflow += 127
-    h_oflow[h_oflow > 255] = 255
-    h_oflow[h_oflow < 0] = 0
-    v_oflow[v_oflow > 255] = 255
-    v_oflow[v_oflow < 0] = 0
+    # h_oflow *= 10
+    # v_oflow *= 10
+    # h_oflow += 127
+    # v_oflow += 127
+    # h_oflow[h_oflow > 255] = 255
+    # h_oflow[h_oflow < 0] = 0
+    # v_oflow[v_oflow > 255] = 255
+    # v_oflow[v_oflow < 0] = 0
+
+    # From beyond short snippits
+    h_oflow[h_oflow < -40] = -40
+    h_oflow[h_oflow > 40] = 40
+    v_oflow[v_oflow < -40] = -40
+    v_oflow[v_oflow > 40] = 40
+    h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
+    v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
+
+
+
     h_oflow = np.rint(h_oflow)
     v_oflow = np.rint(v_oflow)
 

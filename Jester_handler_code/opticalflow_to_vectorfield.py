@@ -50,24 +50,29 @@ im1 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20b
 im2 = os.path.join(os.path.expanduser('~'), 'DukeML', 'datasets', 'jester', '20bn-jester-v1', '13377', '00011.jpg')
 # im1_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '00013__noise0.05.jpg')
 # im2_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '00014__noise0.05.jpg')
-im1_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '00013.jpg')
-im2_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '00014.jpg')
+# im1_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '00013.jpg')
+# im2_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '00014.jpg')
+im1_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '13377-00010.jpg')
+im2_p = os.path.join(os.path.expanduser('~'), 'image_manipulation', 'images', '13377-00011.jpg')
 
 
 i1 = cv2.imread(im1_p)
 i1 = i1[:, :, (2, 1, 0)]
 i2 = cv2.imread(im2_p)
 i2 = i2[:, :, (2, 1, 0)]
+i1 = image_manipulation.resize_image(i1,100,100)
+i2 = image_manipulation.resize_image(i2,100,100)
+
 
 # n=10
-# for r in range(83,83+n):
-#     for c in range(15,15+n):
-#         i1[r,c] = (0,255,0)
+# for r in range(60,60+n):
+#     for c in range(50,50+n):
+#         i1[r,c] = (255,0,0)
 #
-# for r in range(83,83+n):
-#     for c in range(0,0+n):
-#         i2[r,c] = (0,255,0)
-
+# for r in range(60,60+n):
+#     for c in range(40,40+n):
+#         i2[r,c] = (255,0,0)
+#
 
 # cv2.imwrite(im1_p, i1)
 # cv2.imwrite(im2_p, i2)
@@ -79,7 +84,7 @@ h, v = optical_flow.calc_optical_flow(im1_p, im2_p, image_height, image_width)
 X, Y, U, V = optical_flow.get_optical_flow_vector_field(h, v)
 #optical_flow.print_vector_field_with_diff(X, Y, U, V, "Plot title", [(40,15)], downsample)
 
-print_all_optical_flow(h, v, i1, i2, downsample=1)
+print_all_optical_flow(h, v, i1, i2, downsample=5)
 #
 # plt.imshow(h, cmap='gray')
 # plt.show()
