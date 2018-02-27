@@ -96,6 +96,7 @@ def write_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical, i
     # v_oflow[v_oflow > 255] = 255
     # v_oflow[v_oflow < 0] = 0
 
+    '''
     # From beyond short snippits
     h_oflow[h_oflow < -40] = -40
     h_oflow[h_oflow > 40] = 40
@@ -103,20 +104,37 @@ def write_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical, i
     v_oflow[v_oflow > 40] = 40
     h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
     v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
-
-
-
     h_oflow = np.rint(h_oflow)
     v_oflow = np.rint(v_oflow)
+    '''
+
+    # Clip based on evaluation of distribution
+    # This range should include about 99.9% of values
+    h_oflow[h_oflow < -10] = -10
+    h_oflow[h_oflow > 10] = 10
+    v_oflow[v_oflow < -10] = -10
+    v_oflow[v_oflow > 10] = 10
+    # Scale the space [-10,10] to [0,255]
+    OldMax = 10
+    OldMin = -10
+    NewMax = 255
+    NewMin = 0
+    OldRange = (OldMax - OldMin)  
+    NewRange = (NewMax - NewMin)  
+    #NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+    normed_h = (((h_oflow - OldMin) * NewRange) / OldRange) + NewMin
+    normed_v = (((v_oflow - OldMin) * NewRange) / OldRange) + NewMin
+
+
 
     print "\tAfter adjustment..."
-    print "\tmax: ",h_oflow.max()
-    print "\tmin: ",h_oflow.min()
-    print "\tmean: ",h_oflow.mean()
+    print "\tmax: ",normed_h.max()
+    print "\tmin: ",normed_h.min()
+    print "\tmean: ",normed_h.mean()
 
     # Save the optical flow displacement fields as images
-    cv2.imwrite(ofile_name_horizontal, h_oflow)
-    cv2.imwrite(ofile_name_vertical, v_oflow)
+    cv2.imwrite(ofile_name_horizontal, normed_h)
+    cv2.imwrite(ofile_name_vertical, normed_v)
 
 
 

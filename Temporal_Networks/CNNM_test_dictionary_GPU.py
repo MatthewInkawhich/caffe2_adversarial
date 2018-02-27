@@ -29,9 +29,9 @@ import JesterDatasetHandler as jdh
 
 ##################################################################################
 # Gather Inputs
-test_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/VerySmallTestDictionary_5class.txt")
+test_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/SmallTestDictionary_5class.txt")
 PREDICT_NET = "CNNM_jester_predict_net.pb"
-INIT_NET = "CNNM_4epoch_jester_init_net.pb"
+INIT_NET = "CNNM_10epoch_jester_init_net.pb"
 
 gpu_no = 0
 device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
@@ -44,8 +44,6 @@ device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
 arg_scope = {"order":"NCHW", "gpu_id": gpu_no, "use_cudnn": True}
 #arg_scope = {"order":"NCHW"}
 test_model = model_helper.ModelHelper(name="CNNM_jester_test", arg_scope=arg_scope)
-test_model.param_init_net.RunAllOnGPU()
-test_model.net.RunAllOnGPU()
 
 # Populate the model obj with the predict net stuff, which defines the structure of the model
 predict_net_proto = caffe2_pb2.NetDef()
@@ -62,6 +60,8 @@ tmp_param_net = core.Net(init_net_proto)
 test_model.param_init_net = tmp_param_net
 
 
+test_model.param_init_net.RunAllOnGPU()
+test_model.net.RunAllOnGPU()
 ##################################################################################
 # Loop through the test dictionary and run the inferences
 

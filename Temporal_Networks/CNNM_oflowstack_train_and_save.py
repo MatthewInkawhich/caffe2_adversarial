@@ -17,6 +17,9 @@ from caffe2.proto import caffe2_pb2
 from caffe2.python.predictor import mobile_exporter
 import cv2
 import JesterDatasetHandler as jdh
+import sys
+sys.path.append(os.path.join(os.path.expanduser('~'), 'DukeML', 'caffe2_sandbox', 'lib'))
+import model_defs
 
 
 ##################################################################################
@@ -24,14 +27,14 @@ import JesterDatasetHandler as jdh
 train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
 #train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/VerySmallTestDictionary_5class.txt")
 predict_net_out = "CNNM_jester_predict_net.pb" # Note: these are in PWD
-init_net_out = "CNNM_1epoch_jester_init_net.pb"
-checkpoint_iters = 1000
+init_net_out = "CNNM_7_epoch_jester_init_net.pb"
+checkpoint_iters = 2000
 batch_size = 50
-num_epochs = 1 
+num_epochs = 7
 
 gpu_no = 0
 device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
-
+#device_opts_cpu = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CPU)
 
 ##################################################################################
 # MAIN
@@ -51,6 +54,8 @@ train_model = model_helper.ModelHelper(name="CNNM_jester_train", arg_scope=arg_s
 train_model.param_init_net.RunAllOnGPU()
 train_model.net.RunAllOnGPU()
 
+print "Created model helper"
+
 ##################################################################################
 #### Add the model definition the the model object
 
@@ -59,79 +64,16 @@ train_model.net.RunAllOnGPU()
 
 # O = ( (W - K + 2P) / S ) + 1
 
-def Add_CNN_M(model,data):
-
-	# Shape here = 20x100x100
-	with core.DeviceScope(device_opts):
-		##### CONV-1
-		conv1 = brew.conv(model, data, 'conv1', dim_in=20, dim_out=96, kernel=7, stride=2, pad=0)
-		#norm1 = brew.lrn(model, conv1, 'norm1',order = "NCHW")
-		# Shape here = 96x47x47
-		pool1 = brew.max_pool(model, conv1, 'pool1', kernel=2, stride=2)
-		# Shape here = 96x23x23
-		relu1 = brew.relu(model, pool1, 'relu1')
-
-		# Shape here = 96x23x23
-
-		##### CONV-2
-		conv2 = brew.conv(model, 'relu1', 'conv2', dim_in=96, dim_out=256, kernel=5, stride=2, pad=1)
-		# Shape here = 256x11x11
-		pool2 = brew.max_pool(model, conv2, 'pool2', kernel=2, stride=2)
-		# Shape here = 256x5x5
-		relu2 = brew.relu(model, pool2, 'relu2')
-
-		# Shape here = 256x5x5
-
-		##### CONV-3
-		conv3 = brew.conv(model, 'relu2', 'conv3', dim_in=256, dim_out=512, kernel=3, stride=1, pad=1)
-		# Shape here = 512x5x5
-		relu3 = brew.relu(model, conv3, 'relu3')
-
-		# Shape here = 512x5x5
-
-		##### CONV-4
-		conv4 = brew.conv(model, 'relu3', 'conv4', dim_in=512, dim_out=512, kernel=3, stride=1, pad=1)
-		# Shape here = 512x5x5
-		relu4 = brew.relu(model, conv4, 'relu4')
-
-		# Shape here = 512x5x5
-
-		##### CONV-5
-		conv5 = brew.conv(model, 'relu4', 'conv5', dim_in=512, dim_out=512, kernel=3, stride=1, pad=1)
-		# Shape here = 512x5x5
-		pool5 = brew.max_pool(model, conv5, 'pool5', kernel=2, stride=2)
-		# Shape here = 512x2x2
-		relu5 = brew.relu(model, pool5, 'relu5')
-
-		# Shape here = 512x2x2
-
-		fc6 = brew.fc(model, relu5, 'fc6', dim_in=512*2*2, dim_out=4096)
-		relu6 = brew.relu(model, fc6, 'relu6')
-
-		# Shape here = 1x4096
-
-		fc7 = brew.fc(model, relu6, 'fc7', dim_in=4096, dim_out=4096)
-		relu7 = brew.relu(model, fc7, 'relu7')
-
-		# Shape here = 1x4096
-
-		fc8 = brew.fc(model, relu7, 'fc8', dim_in=4096, dim_out=5)
-
-		# Shape here = 1x5
-
-		softmax = brew.softmax(model,fc8, 'softmax')
-
-		return softmax
 
 
 # Add the model definition to the model
-softmax=Add_CNN_M(train_model, 'data')
+softmax=model_defs.Add_CNN_M(train_model, 'data', device_opts)
 
 ##################################################################################
 #### Step 3: Add training operators to the model
 
 ITER = brew.iter(train_model, "iter")
-train_model.Checkpoint([ITER] + train_model.params, [], db="cnnm_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
+train_model.Checkpoint([ITER] + train_model.params, [], db="cnnm7_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
 
 
 xent = train_model.LabelCrossEntropy(['softmax', 'label'], 'xent')
@@ -141,18 +83,22 @@ train_model.AddGradientOperators([loss])
 
 optimizer.build_sgd(train_model,base_learning_rate=0.01, policy="step", stepsize=10000, gamma=0.1, momentum=0.9)
 
+print "Added training operators"
+
 ##################################################################################
 #### Run the training procedure
 
 # Initialization.
+print "Initializing dataset"
 train_dataset = jdh.Jester_Dataset(dictionary_file=train_dictionary,seq_size=10)
+print "finished initializing dataset"
 
 # Prime the workspace with some data so we can run init net once
 for image, label in train_dataset.read(batch_size=1):
 	workspace.FeedBlob("data", image)
 	workspace.FeedBlob("label", label)
 	break
-
+print "Running param init net once"
 # run the param init network once
 workspace.RunNetOnce(train_model.param_init_net)
 # create the network
@@ -163,6 +109,8 @@ workspace.CreateNet(train_model.net, overwrite=True)
 accuracy = []
 loss = []
 cnt = 0
+print "Beginning training"
+
 # Manually run the network for the specified amount of iterations
 for epoch in range(num_epochs):
 
@@ -184,10 +132,10 @@ for epoch in range(num_epochs):
 		accuracy.append(curr_acc)
 		loss.append(curr_loss)
 		print "[{}][{}/{}] loss={}, accuracy={}".format(epoch, index, int(len(train_dataset) / batch_size),curr_loss, curr_acc)
-		#cnt += 1
-		#if cnt == 100:
-		#	break
-	#break
+		cnt += 1
+		if cnt == 100:
+			break
+	break
 
 ##################################################################################
 #### Save the trained model for testing later
@@ -195,9 +143,11 @@ for epoch in range(num_epochs):
 # save as two protobuf files (predict_net.pb and init_net.pb)
 # predict_net.pb defines the architecture of the network
 # init_net.pb defines the network params/weights
+ 
+arg_scope = {"order":"NCHW"}
 print "Saving the trained model to predict/init.pb files..."
-deploy_model = model_helper.ModelHelper(name="cnnm_deploy", arg_scope=arg_scope, init_params=False)
-Add_CNN_M(deploy_model, "data")
+deploy_model = model_helper.ModelHelper(name="cnnm_deploy", arg_scope=arg_scope, init_params=True)
+model_defs.Add_CNN_M(deploy_model, "data", device_opts)
 
 # Use the MOBILE EXPORTER to save the deploy model as pbs
 # https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py

@@ -61,8 +61,8 @@ def create_oflow_stack(seq):
 	#print oflow_stack.min()	
 
 	# Normalize the whole stack to [0,1]
-	if oflow_stack.max() != oflow_stack.min():
-		oflow_stack = (oflow_stack-oflow_stack.min())/(oflow_stack.max()-oflow_stack.min()) 
+#	if oflow_stack.max() != oflow_stack.min():
+#		oflow_stack = (oflow_stack-oflow_stack.min())/(oflow_stack.max()-oflow_stack.min()) 
 
 	#print oflow_stack.max()
 	#print oflow_stack.min()	
