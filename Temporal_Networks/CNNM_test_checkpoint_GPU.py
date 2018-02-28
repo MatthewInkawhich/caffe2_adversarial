@@ -30,8 +30,9 @@ import JesterDatasetHandler as jdh
 ##################################################################################
 # Gather Inputs
 test_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TestDictionary_5class.txt")
-PREDICT_NET = "scaled_6FPS_CNNM_jester_predict_net__gpu.pb"
-INIT_NET = "scaled_6FPS_CNNM_10epoch_jester_init_net__gpu.pb"
+PREDICT_NET = "CNNM_jester_predict_net.pb"
+#INIT_NET = "normed_CNNM_7epoch_jester_init_net.pb"
+INIT_CHECKPOINT = os.path.join(os.path.expanduser('~'),"DukeML/models/CNNM/cnnm7_checkpoint_38000.lmdb")
 
 gpu_no = 0
 device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
@@ -43,7 +44,7 @@ device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
 # specify that input data is stored in NCHW storage order
 arg_scope = {"order":"NCHW", "gpu_id": gpu_no, "use_cudnn": True}
 #arg_scope = {"order":"NCHW"}
-test_model = model_helper.ModelHelper(name="CNNM_jester_test", arg_scope=arg_scope)
+test_model = model_helper.ModelHelper(name="CNNM_jester_test", arg_scope=arg_scope, init_params=False)
 
 # Populate the model obj with the predict net stuff, which defines the structure of the model
 predict_net_proto = caffe2_pb2.NetDef()
@@ -52,16 +53,22 @@ with open(PREDICT_NET, "rb") as f:
 tmp_predict_net = core.Net(predict_net_proto)
 test_model.net = tmp_predict_net
 
+'''
 # Populate the model obj with the init net stuff, which provides the parameters for the model
 init_net_proto = caffe2_pb2.NetDef()
 with open(INIT_NET, "rb") as f:
     init_net_proto.ParseFromString(f.read())
 tmp_param_net = core.Net(init_net_proto)
 test_model.param_init_net = tmp_param_net
+'''
+
+workspace.RunOperatorOnce(core.CreateOperator("Load", [], [], absolute_path=1, db=INIT_CHECKPOINT, db_type="lmdb", keep_device=1, load_all=1))
 
 
-test_model.param_init_net.RunAllOnGPU()
-test_model.net.RunAllOnGPU()
+
+#test_model.param_init_net.RunAllOnGPU()
+#test_model.net.RunAllOnGPU()
+
 ##################################################################################
 # Loop through the test dictionary and run the inferences
 
