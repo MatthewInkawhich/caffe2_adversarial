@@ -38,8 +38,6 @@ def calc_optical_flow(im1, im2, image_height, image_width):
     # v_oflow[v_oflow > 127] = 127
     # h_oflow = np.rint(h_oflow)
     # v_oflow = np.rint(v_oflow)
-    h_oflow *= 10
-    v_oflow *= 10
     #h_oflow += 127
     #v_oflow += 127
     #h_oflow[h_oflow > 255] = 255
