@@ -50,9 +50,9 @@ def create_oflow_stack(seq):
 		
 		of_img = handle_greyscale(of_img)
 		#print "Shape after greyscale : {}".format(of_img.shape)
-	
-		of_img /= 255.
-
+		
+		of_img = of_img / 255.
+		
 		oflow_stack[i,:,:] = of_img
 
 		#print "Printing"
@@ -61,16 +61,23 @@ def create_oflow_stack(seq):
 	#print oflow_stack.min()	
 
 	# Normalize the whole stack to [0,1]
-#	if oflow_stack.max() != oflow_stack.min():
-#		oflow_stack = (oflow_stack-oflow_stack.min())/(oflow_stack.max()-oflow_stack.min()) 
-
+	#if oflow_stack.max() != oflow_stack.min():
+	#	oflow_stack = (oflow_stack-oflow_stack.min())/(oflow_stack.max()-oflow_stack.min()) 
+	'''
+	# Normalize [0,255] back to [0,1]
+	OldMax = 255
+	OldMin = 0
+	NewMax = 1
+	NewMin = 0
+	OldRange = (OldMax - OldMin)  
+	NewRange = (NewMax - NewMin)  
+	#NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+	oflow_stack = (((oflow_stack - OldMin) * NewRange) / OldRange) + NewMin
+	'''
 	#print oflow_stack.max()
 	#print oflow_stack.min()	
-	
 	#exit()
-
 	return oflow_stack
-	#exit()
 
 
 # Given the input dictionary file, we can make a list of sequences with labels that represent all
@@ -97,7 +104,7 @@ def make_list_of_seqs(ifile,seq_size):
 	    path = split_line[0]
 
 	    # Change the path from the original 20bn-jester-v1 to 20bn-jester-v1-oflow
-	    path = path.replace("20bn-jester-v1","20bn-jester-v1-oflow")
+	    path = path.replace("20bn-jester-v1","20bn-jester-v1-oflow-6FPS-scaled")
 
 	    assert(os.path.exists(path) == True)
 	    
@@ -110,7 +117,7 @@ def make_list_of_seqs(ifile,seq_size):
 
 	    # Calculate the chunk that we are going to take out of the middle
 	    # If percent middle is 70%, we will not include the first 15% nor the last 15% in our stacks
-	    percent_middle = .7
+	    percent_middle = 1
 	    percent_of_sides = (1.-percent_middle)/2.
 	    start_ind = int(len(full_oflow_arr)*percent_of_sides)
 	    end_ind = int(len(full_oflow_arr) - start_ind - seq_size)
@@ -129,11 +136,6 @@ def make_list_of_seqs(ifile,seq_size):
 	            single_seq.append(full_oflow_arr[i+j].replace("_h.jpg","_v.jpg"))
 	        # Add this single sequence to the global list of sequences and the label
 	        my_list_of_seqs.append([single_seq, label])
-
-	    #print start_ind
- 	    #print end_ind
-	    #print my_list_of_seqs
-	    #exit()
 
 	# randomly shuffle list of contiguous sequences
 	random.shuffle(my_list_of_seqs)
@@ -192,7 +194,7 @@ class Jester_Dataset(object):
 				# Create an optical flow stack from the seq images
 				# oflow_stack is a np.ndarray with shape (20,100,100)
 				oflow_stack = create_oflow_stack(seq)
-
+				
 				oflow_batch.append(oflow_stack)
 				labels.append(label)
 
