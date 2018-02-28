@@ -26,13 +26,13 @@ import model_defs
 # Gather Inputs
 train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/TrainDictionary_5class.txt")
 #train_dictionary = os.path.join(os.path.expanduser('~'),"DukeML/datasets/jester/VerySmallTestDictionary_5class.txt")
-predict_net_out_gpu = "scaled_6FPS_CNNM_jester_predict_net__gpu.pb" # Note: these are in PWD
-init_net_out_gpu = "scaled_6FPS_CNNM_10epoch_jester_init_net__gpu.pb"
-predict_net_out_cpu = "scaled_6FPS_CNNM_jester_predict_net__cpu.pb" # Note: these are in PWD
-init_net_out_cpu = "scaled_6FPS_CNNM_10epoch_jester_init_net__cpu.pb"
-checkpoint_iters = 5000
+#predict_net_out = "normed_CNNM_jester_predict_net.pb" # Note: these are in PWD
+#init_net_out = "normed_CNNM_7epoch_jester_init_net.pb"
+predict_net_out = "cpu_predict_net.pb"
+init_net_out = "cpu_init_net.pb"
+checkpoint_iters = 6
 batch_size = 50
-num_epochs = 10
+num_epochs = 7
 
 gpu_no = 0
 device_opts = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
@@ -49,6 +49,7 @@ print "Entering Main..."
 
 # specify that input data is stored in NCHW storage order
 arg_scope = {"order":"NCHW", "gpu_id": gpu_no, "use_cudnn": True}
+#arg_scope = {"order":"NCHW"}
 
 # create the model object that will be used for the train net
 # This model object contains the network definition and the parameter storage
@@ -70,12 +71,13 @@ print "Created model helper"
 
 # Add the model definition to the model
 softmax=model_defs.Add_CNN_M(train_model, 'data', device_opts)
+#softmax = model_defs.Add_CNN_M_test(train_model, 'data')
 
 ##################################################################################
 #### Step 3: Add training operators to the model
 
 ITER = brew.iter(train_model, "iter")
-train_model.Checkpoint([ITER] + train_model.params, [], db="scaled_6FPS_cnnm10_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
+train_model.Checkpoint([ITER] + train_model.params, [], db="cpu_checkpoint_%05d.lmdb", db_type="lmdb", every=checkpoint_iters)
 
 
 xent = train_model.LabelCrossEntropy(['softmax', 'label'], 'xent')
@@ -83,7 +85,7 @@ loss = train_model.AveragedLoss(xent, 'loss')
 brew.accuracy(train_model, ['softmax', 'label'], 'accuracy')
 train_model.AddGradientOperators([loss])
 
-optimizer.build_sgd(train_model,base_learning_rate=0.01, policy="step", stepsize=15000, gamma=0.1, momentum=0.9)
+optimizer.build_sgd(train_model,base_learning_rate=0.01, policy="step", stepsize=10000, gamma=0.1, momentum=0.9)
 
 print "Added training operators"
 
@@ -134,10 +136,10 @@ for epoch in range(num_epochs):
 		accuracy.append(curr_acc)
 		loss.append(curr_loss)
 		print "[{}][{}/{}] loss={}, accuracy={}".format(epoch, index, int(len(train_dataset) / batch_size),curr_loss, curr_acc)
-#		cnt += 1
-#		if cnt == 10:
-#			break
-#	break
+		cnt += 1
+		if cnt == 10:
+			break
+	break
 
 ##################################################################################
 #### Save the trained model for testing later
@@ -145,40 +147,23 @@ for epoch in range(num_epochs):
 # save as two protobuf files (predict_net.pb and init_net.pb)
 # predict_net.pb defines the architecture of the network
 # init_net.pb defines the network params/weights
-
-
-# Save model with GPU device options
-print "Saving the trained model w/ GPU device options to predict/init.pb files..."
-deploy_model_gpu = model_helper.ModelHelper(name="cnnm_deploy_gpu", arg_scope=arg_scope, init_params=False)
-model_defs.Add_CNN_M(deploy_model_gpu, "data", device_opts)
-
-# Use the MOBILE EXPORTER to save the deploy model as pbs
-# https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
-workspace.RunNetOnce(deploy_model_gpu.param_init_net)
-workspace.CreateNet(deploy_model_gpu.net, overwrite=True) # (?)
-init_net, predict_net = mobile_exporter.Export(workspace, deploy_model_gpu.net, deploy_model_gpu.params)
-with open(init_net_out_gpu, 'wb') as f:
-    f.write(init_net.SerializeToString())
-with open(predict_net_out_gpu, 'wb') as f:
-    f.write(predict_net.SerializeToString())
-
-
-
-# Save model with CPU device options
+ 
 arg_scope = {"order":"NCHW"}
-print "Saving the trained model w/ CPU device options to predict/init.pb files..."
-deploy_model_cpu = model_helper.ModelHelper(name="cnnm_deploy_cpu", arg_scope=arg_scope, init_params=False)
-model_defs.Add_CNN_M(deploy_model_cpu, "data", device_opts_cpu)
+print "Saving the trained model to predict/init.pb files..."
+deploy_model = model_helper.ModelHelper(name="cnnm_deploy", arg_scope=arg_scope, init_params=False)
+#model_defs.Add_CNN_M_test(deploy_model, "data")#, device_opts_cpu)
+model_defs.Add_CNN_M(deploy_model, "data", device_opts_cpu)
 
 # Use the MOBILE EXPORTER to save the deploy model as pbs
 # https://github.com/caffe2/caffe2/blob/master/caffe2/python/predictor/mobile_exporter_test.py
-workspace.RunNetOnce(deploy_model_cpu.param_init_net)
-workspace.CreateNet(deploy_model_cpu.net, overwrite=True) # (?)
-init_net, predict_net = mobile_exporter.Export(workspace, deploy_model_cpu.net, deploy_model_cpu.params)
-with open(init_net_out_cpu, 'wb') as f:
+workspace.RunNetOnce(deploy_model.param_init_net)
+workspace.CreateNet(deploy_model.net, overwrite=True) # (?)
+init_net, predict_net = mobile_exporter.Export(workspace, deploy_model.net, deploy_model.params)
+with open(init_net_out, 'wb') as f:
     f.write(init_net.SerializeToString())
-with open(predict_net_out_cpu, 'wb') as f:
+with open(predict_net_out, 'wb') as f:
     f.write(predict_net.SerializeToString())
+
 print "Done, saving..."
 
 # After execution is done lets plot the values
