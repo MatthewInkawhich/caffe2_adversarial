@@ -17,12 +17,14 @@ def calc_optical_flow(im1, im2, image_height, image_width):
     frame2 = image_manipulation.resize_image(cv2.imread(im2), image_height, image_width)
     f2_gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    if cv2_version > 2:
-        # NATES CV2
-        flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-    else:
-        # MATTS CV2
-        flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 30, 3, 5, 1.2, 0)
+    # if cv2_version > 2:
+    #     # NATES CV2
+    #     flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    # else:
+    #     # MATTS CV2
+    #     flow = cv2.calcOpticalFlowFarneback(f1_gray,f2_gray, 0.5, 3, 30, 3, 5, 1.2, 0)
+    oflow_tvl1= cv2.DualTVL1OpticalFlow_create()
+    flow = oflow_tvl1.calc(f1_gray, f2_gray, None)
 
     h_oflow = flow[...,0]
     v_oflow = flow[...,1]
@@ -94,35 +96,35 @@ def write_optical_flow(img1, img2, ofile_name_horizontal, ofile_name_vertical, i
     # v_oflow[v_oflow > 255] = 255
     # v_oflow[v_oflow < 0] = 0
 
-    
+
     # Clip and norm
+    # h_oflow[h_oflow < -10] = -10
+    # h_oflow[h_oflow > 10] = 10
+    # v_oflow[v_oflow < -10] = -10
+    # v_oflow[v_oflow > 10] = 10
+    # h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
+    # v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
+    #h_oflow = np.rint(h_oflow)
+    #v_oflow = np.rint(v_oflow)
+
+
+    # Clip based on evaluation of distribution
+    # This range should include about 99.9% of values
     h_oflow[h_oflow < -10] = -10
     h_oflow[h_oflow > 10] = 10
     v_oflow[v_oflow < -10] = -10
     v_oflow[v_oflow > 10] = 10
-    h_oflow = cv2.normalize(h_oflow, None, 0, 255, cv2.NORM_MINMAX)
-    v_oflow = cv2.normalize(v_oflow, None, 0, 255, cv2.NORM_MINMAX)
-    #h_oflow = np.rint(h_oflow)
-    #v_oflow = np.rint(v_oflow)
-    
-    '''
-    # Clip based on evaluation of distribution
-    # This range should include about 99.9% of values
-    h_oflow[h_oflow < -8] = -8
-    h_oflow[h_oflow > 8] = 8
-    v_oflow[v_oflow < -8] = -8
-    v_oflow[v_oflow > 8] = 8
     # Scale the space [-10,10] to [0,255]
-    OldMax = 8
-    OldMin = -8
+    OldMax = 10
+    OldMin = -10
     NewMax = 255
     NewMin = 0
-    OldRange = (OldMax - OldMin)  
-    NewRange = (NewMax - NewMin)  
+    OldRange = (OldMax - OldMin)
+    NewRange = (NewMax - NewMin)
     #NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
     h_oflow = (((h_oflow - OldMin) * NewRange) / OldRange) + NewMin
     v_oflow = (((v_oflow - OldMin) * NewRange) / OldRange) + NewMin
-    '''
+
 
 
     print "\tAfter adjustment..."
@@ -178,6 +180,7 @@ def print_vector_field(X, Y, U, V, title, downsample=1):
     plt.xlim(-1, col)
     plt.ylim(-1, row)
     plt.gca().invert_yaxis()
+    #plt.show(block=False)
     plt.show()
 
 
@@ -201,7 +204,7 @@ def print_vector_field_with_diff(X, Y, U, V, title, diff=[], downsample=1):
     plt.xlim(-1, col)
     plt.ylim(-1, row)
     plt.gca().invert_yaxis()
-    plt.show()
+    plt.show(block=False)
 
 
 
